@@ -1,0 +1,3516 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0c" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>LUDO</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@800;900&family=JetBrains+Mono:wght@800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0a0a0c;
+      --paper: #f4f1e8;
+      --concrete: #dad6c8;
+      --white: #ffffff;
+
+      --p0: #ff2e1f; /* RED - Bottom Left */
+      --p0-tint: #ffd8d4;
+      --p1: #00b862; /* GRN - Top Left */
+      --p1-tint: #ccf5e0;
+      --p2: #ffb800; /* YEL - Top Right */
+      --p2-tint: #fff0c2;
+      --p3: #1f5eff; /* BLU - Bottom Right */
+      --p3-tint: #d4e2ff;
+
+      --font-display: 'Barlow Condensed', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      position: fixed;
+      inset: 0;
+      background-color: var(--ink);
+      background-image: radial-gradient(#1f1f27 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+      font-family: var(--font-display);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: min(1.6vw, 1.2dvh);
+    }
+
+    /* Compact Brutalist Utility Strip */
+    .utility-bar {
+      width: min(94vw, 86dvh);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      z-index: 5;
+    }
+
+    .util-btn {
+      appearance: none;
+      background: var(--paper);
+      color: var(--ink);
+      border-top: 3px solid var(--ink);
+      border-left: 3px solid var(--ink);
+      border-right: 6px solid var(--ink);
+      border-bottom: 6px solid var(--ink);
+      height: clamp(32px, 4.8vmin, 42px);
+      padding: 0 clamp(10px, 1.8vmin, 15px);
+      font-family: var(--font-display);
+      font-size: clamp(14px, 2.2vmin, 19px);
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: transform 0.06s;
+    }
+
+    .util-btn svg {
+      width: clamp(14px, 2.1vmin, 18px);
+      height: clamp(14px, 2.1vmin, 18px);
+      stroke: currentColor;
+      stroke-width: 2.6;
+      fill: none;
+      stroke-linecap: square;
+      stroke-linejoin: miter;
+    }
+
+    .util-btn:active {
+      transform: translate(2px, 2px);
+    }
+
+    .util-btn.is-active {
+      background: var(--p2);
+      color: var(--ink);
+    }
+
+    .util-btn.danger-btn:active {
+      background: var(--p0);
+      color: var(--white);
+    }
+
+    .board-frame {
+      position: relative;
+      z-index: 2;
+      width: min(94vw, 86dvh);
+      height: min(94vw, 86dvh);
+      aspect-ratio: 1 / 1;
+      background: #e6e2d3;
+      padding: min(1.2vw, 1.2dvh);
+      border: min(0.7vw, 0.7dvh) solid var(--ink);
+      box-shadow: min(1.4vw, 1.4dvh) min(1.4vw, 1.4dvh) 0 rgba(0, 0, 0, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .board-stage {
+      width: 100%;
+      height: 100%;
+      background: var(--paper);
+      border: min(0.8vw, 0.8dvh) solid var(--ink);
+      position: relative;
+      overflow: hidden;
+    }
+
+    #ludoCanvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      cursor: pointer;
+    }
+
+    /* Full-Viewport Brutalist Settings & Victory Modal (Never Clipped by Board) */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(10, 10, 12, 0.82);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 100;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-card {
+      width: min(92vw, 370px);
+      max-height: 92dvh;
+      overflow-y: auto;
+      background: var(--paper);
+      border-top: 5px solid var(--ink);
+      border-left: 5px solid var(--ink);
+      border-right: 10px solid var(--ink);
+      border-bottom: 10px solid var(--ink);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
+    }
+
+    .modal-head {
+      background: var(--ink);
+      color: var(--paper);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .modal-head-title {
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .modal-close-btn {
+      appearance: none;
+      border: none;
+      background: var(--paper);
+      color: var(--ink);
+      width: 28px;
+      height: 28px;
+      font-family: var(--font-mono);
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close-btn:active {
+      background: var(--p0);
+      color: var(--white);
+    }
+
+    .modal-body {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      border-bottom: 2px solid var(--concrete);
+      padding-bottom: 9px;
+    }
+
+    .setting-label {
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--ink);
+    }
+
+    .seg-group {
+      display: flex;
+      border: 3px solid var(--ink);
+      background: var(--concrete);
+    }
+
+    .seg-btn {
+      appearance: none;
+      border: none;
+      border-right: 3px solid var(--ink);
+      background: transparent;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 800;
+      padding: 5px 9px;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    .seg-btn:last-child {
+      border-right: none;
+    }
+
+    .seg-btn.active {
+      background: var(--ink);
+      color: var(--paper);
+    }
+
+    .faction-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .f-card {
+      border: 3px solid var(--ink);
+      background: var(--white);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 8px;
+      cursor: pointer;
+    }
+
+    .f-tag {
+      font-size: 16px;
+      font-weight: 900;
+      padding: 2px 7px;
+      border: 2px solid var(--ink);
+    }
+
+    .f-mode-txt {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .modal-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 2px;
+    }
+
+    .action-btn {
+      appearance: none;
+      border-top: 3px solid var(--ink);
+      border-left: 3px solid var(--ink);
+      border-right: 7px solid var(--ink);
+      border-bottom: 7px solid var(--ink);
+      padding: 9px 12px;
+      font-family: var(--font-display);
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .action-btn.primary {
+      background: var(--p1);
+      color: var(--ink);
+    }
+
+    .action-btn.secondary {
+      background: var(--white);
+      color: var(--ink);
+    }
+
+    .action-btn:active {
+      transform: translate(2px, 2px);
+    }
+  </style>
+</head>
+<body>
+  <!-- Compact Top Utility Controls -->
+  <nav class="utility-bar" aria-label="Game Controls">
+    <button class="util-btn is-active" id="quickModeBtn" type="button" title="Toggle Strike+Dice or Classic Mode">
+      STRIKE
+    </button>
+    <button class="util-btn" id="quickSpeedBtn" type="button" title="Toggle Animation Speed">
+      1X
+    </button>
+    <button class="util-btn is-active" id="quickSfxBtn" type="button" title="Toggle Sound Effects">
+      SFX
+    </button>
+    <button class="util-btn danger-btn" id="quickRestartBtn" type="button" title="Restart Match">
+      <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      RESTART
+    </button>
+    <button class="util-btn" id="openSettingsBtn" type="button" title="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
+  </nav>
+
+  <main class="board-frame">
+    <section class="board-stage">
+      <canvas id="ludoCanvas"></canvas>
+    </section>
+  </main>
+
+  <!-- Full-Screen Settings & Victory Modal -->
+  <div class="modal-backdrop" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-head">
+        <span class="modal-head-title" id="modalTitle">SETTINGS</span>
+        <button class="modal-close-btn" id="closeModalBtn" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="setting-row">
+          <span class="setting-label">MODE</span>
+          <div class="seg-group" id="modeSegGroup">
+            <button class="seg-btn active" data-mode="STRIKE_DICE" type="button">STRIKE+DICE</button>
+            <button class="seg-btn" data-mode="CLASSIC" type="button">CLASSIC</button>
+          </div>
+        </div>
+
+        <div class="setting-row" id="strikeFreqRow">
+          <span class="setting-label">STRIKE EVERY</span>
+          <div class="seg-group" id="freqSegGroup">
+            <button class="seg-btn" data-freq="1" type="button">1T</button>
+            <button class="seg-btn" data-freq="2" type="button">2T</button>
+            <button class="seg-btn active" data-freq="4" type="button">4T</button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">SPEED</span>
+          <div class="seg-group" id="speedSegGroup">
+            <button class="seg-btn active" data-spd="1" type="button">1X</button>
+            <button class="seg-btn" data-spd="2" type="button">2X FAST</button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">AUDIO &amp; HAPTICS</span>
+          <div class="seg-group" id="sfxSegGroup">
+            <button class="seg-btn active" data-sfx="ON" type="button">ON</button>
+            <button class="seg-btn" data-sfx="OFF" type="button">OFF</button>
+          </div>
+        </div>
+
+        <div class="faction-grid">
+          <div class="f-card" data-f-card="0">
+            <span class="f-tag" style="background: var(--p0); color: #fff;">RED</span>
+            <span class="f-mode-txt" id="fModeTxt0">HUM</span>
+          </div>
+          <div class="f-card" data-f-card="1">
+            <span class="f-tag" style="background: var(--p1); color: var(--ink);">GRN</span>
+            <span class="f-mode-txt" id="fModeTxt1">BOT</span>
+          </div>
+          <div class="f-card" data-f-card="2">
+            <span class="f-tag" style="background: var(--p2); color: var(--ink);">YEL</span>
+            <span class="f-mode-txt" id="fModeTxt2">BOT</span>
+          </div>
+          <div class="f-card" data-f-card="3">
+            <span class="f-tag" style="background: var(--p3); color: #fff;">BLU</span>
+            <span class="f-mode-txt" id="fModeTxt3">BOT</span>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="action-btn secondary" id="resumeBtn" type="button">RESUME</button>
+          <button class="action-btn primary" id="restartMatchBtn" type="button">RESTART</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      /* =========================================================================
+         1. STRICT (X, Y) = (COL, ROW) GEOMETRY & CONSTANTS (0..15 GRID)
+         ========================================================================= */
+      const STORAGE_KEY = 'BRUTAL_LUDO_SEALS_V8';
+
+      const FACTIONS = [
+        { id: 0, code: 'RED', color: '#ff2e1f', tint: '#ffd8d4', startOffset: 0 },
+        { id: 1, code: 'GRN', color: '#00b862', tint: '#ccf5e0', startOffset: 13 },
+        { id: 2, code: 'YEL', color: '#ffb800', tint: '#fff0c2', startOffset: 26 },
+        { id: 3, code: 'BLU', color: '#1f5eff', tint: '#d4e2ff', startOffset: 39 }
+      ];
+
+      // 52 clockwise perimeter cells as [x (col), y (row)] starting from RED start [6, 13]
+      const MAIN_TRACK = [
+        [6, 13], [6, 12], [6, 11], [6, 10], [6, 9],
+        [5, 8], [4, 8], [3, 8], [2, 8], [1, 8], [0, 8],
+        [0, 7],
+        [0, 6], [1, 6], [2, 6], [3, 6], [4, 6], [5, 6],
+        [6, 5], [6, 4], [6, 3], [6, 2], [6, 1], [6, 0],
+        [7, 0],
+        [8, 0], [8, 1], [8, 2], [8, 3], [8, 4], [8, 5],
+        [9, 6], [10, 6], [11, 6], [12, 6], [13, 6], [14, 6],
+        [14, 7],
+        [14, 8], [13, 8], [12, 8], [11, 8], [10, 8], [9, 8],
+        [8, 9], [8, 10], [8, 11], [8, 12], [8, 13], [8, 14],
+        [7, 14], [6, 14]
+      ];
+
+      // Home stretch paths for steps 51..55
+      const HOME_PATHS = [
+        [[7, 13], [7, 12], [7, 11], [7, 10], [7, 9]], // P0 RED going UP
+        [[1, 7], [2, 7], [3, 7], [4, 7], [5, 7]],     // P1 GRN going RIGHT
+        [[7, 1], [7, 2], [7, 3], [7, 4], [7, 5]],     // P2 YEL going DOWN
+        [[13, 7], [12, 7], [11, 7], [10, 7], [9, 7]]  // P3 BLU going LEFT
+      ];
+
+      // ONLY the 6-cell Home Column (5 colored cells + 1 white outer cell) for each player [xMin, yMin, xMax, yMax].
+      const HOME_COLUMN_BARRIERS = [
+        [7.0, 9.0, 8.0, 15.0], // P0 RED: [7, 9..13] (5 red) + [7, 14] (1 white)
+        [0.0, 7.0, 6.0, 8.0],  // P1 GRN: [1..5, 7] (5 green) + [0, 7] (1 white)
+        [7.0, 0.0, 8.0, 6.0],  // P2 YEL: [7, 1..5] (5 yellow) + [7, 0] (1 white)
+        [9.0, 7.0, 15.0, 8.0]  // P3 BLU: [9..13, 7] (5 blue) + [14, 7] (1 white)
+      ];
+
+      // Yard hangar token centers [x, y] inside each 6x6 corner yard
+      const YARD_SLOTS = [
+        [[1.88, 10.88], [4.12, 10.88], [1.88, 13.12], [4.12, 13.12]], // P0 RED
+        [[1.88, 1.88], [4.12, 1.88], [1.88, 4.12], [4.12, 4.12]],     // P1 GRN
+        [[10.88, 1.88], [13.12, 1.88], [10.88, 4.12], [13.12, 4.12]], // P2 YEL
+        [[10.88, 10.88], [13.12, 10.88], [10.88, 13.12], [13.12, 13.12]] // P3 BLU
+      ];
+
+      // Yard outer bounds [x0, y0, x1, y1]
+      const YARD_BOUNDS = [
+        [0, 9, 6, 15], // P0 RED
+        [0, 0, 6, 6],  // P1 GRN
+        [9, 0, 15, 6], // P2 YEL
+        [9, 9, 15, 15] // P3 BLU
+      ];
+
+      // Center of each yard where the Human / Bot logo sits
+      const YARD_CENTERS = [
+        [3.0, 12.0], // P0 RED
+        [3.0, 3.0],  // P1 GRN
+        [12.0, 3.0], // P2 YEL
+        [12.0, 12.0] // P3 BLU
+      ];
+
+      // Center points in the 4 colored trapezoids around the central 3D die
+      const CENTER_NUMBER_SLOTS = [
+        [7.5, 8.58], // P0 RED (Bottom)
+        [6.42, 7.5], // P1 GRN (Left)
+        [7.5, 6.42], // P2 YEL (Top)
+        [8.58, 7.5]  // P3 BLU (Right)
+      ];
+
+      const YARD_PAD = 0.90;
+
+      function getScoreCellRect(pIdx, cellIdx) {
+        const [x0, y0, x1, y1] = YARD_BOUNDS[pIdx];
+        const s = YARD_PAD;
+        const isLeftYard = pIdx === 0 || pIdx === 1;
+        const rx = isLeftYard ? x0 : x1 - s;
+        const bottomEdge = y1 - s;
+        const ry = bottomEdge - (cellIdx + 1) * s;
+        return { x: rx, y: ry, w: s, h: s, cx: rx + s * 0.5, cy: ry + s * 0.5 };
+      }
+
+      const SAFE_TRACK_INDICES = new Set([0, 8, 13, 21, 26, 34, 39, 47]);
+      const START_SQUARE_OWNER = { 0: 0, 13: 1, 26: 2, 39: 3 };
+
+      const STACK_OFFSETS = {
+        2: [[-0.18, -0.14], [0.18, 0.14]],
+        3: [[-0.20, -0.16], [0.20, -0.16], [0.0, 0.18]],
+        4: [[-0.20, -0.20], [0.20, -0.20], [-0.20, 0.20], [0.20, 0.20]]
+      };
+
+      // The 3 Seal Angles matching the reference drawing:
+      // 1st seal = Top (-90°), 2nd seal = Bottom-Right (+42°), 3rd seal = Bottom-Left (+138°)
+      const SEAL_ANGLES = [
+        -Math.PI / 2,
+        (42 * Math.PI) / 180,
+        (138 * Math.PI) / 180
+      ];
+
+      /* =========================================================================
+         2. WEB AUDIO SYNTHESIZER & HAPTICS
+         ========================================================================= */
+      class SoundEngine {
+        constructor() {
+          this.ctx = null;
+          this.enabled = true;
+        }
+
+        init() {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.ctx = new AudioCtx();
+          }
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+        }
+
+        vibrate(ms) {
+          if (!this.enabled) return;
+          try {
+            if (navigator.vibrate) navigator.vibrate(ms);
+          } catch (_) {}
+        }
+
+        tone(fStart, fEnd, dur, type = 'square', vol = 0.11) {
+          if (!this.enabled) return;
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(fStart, now);
+          if (fEnd !== fStart) {
+            osc.frequency.exponentialRampToValueAtTime(Math.max(20, fEnd), now + dur);
+          }
+          gain.gain.setValueAtTime(vol, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + dur);
+        }
+
+        tick() {
+          this.tone(260 + Math.random() * 190, 120, 0.028, 'triangle', 0.07);
+        }
+
+        lockDie(val) {
+          this.vibrate(val === 6 ? [16, 25, 24] : 12);
+          if (val === 6) {
+            this.tone(440, 880, 0.14, 'sawtooth', 0.13);
+          } else {
+            this.tone(210, 95, 0.08, 'triangle', 0.15);
+          }
+        }
+
+        hop(step) {
+          this.vibrate(6);
+          const f = 290 + (step % 12) * 22;
+          this.tone(f, f * 1.32, 0.042, 'triangle', 0.1);
+        }
+
+        deploy() {
+          this.vibrate([14, 20, 18]);
+          this.tone(330, 660, 0.14, 'square', 0.12);
+        }
+
+        capture() {
+          this.vibrate([30, 25, 50]);
+          this.tone(540, 65, 0.24, 'sawtooth', 0.18);
+        }
+
+        sealLock() {
+          this.vibrate([25, 20, 40]);
+          this.tone(320, 90, 0.19, 'sawtooth', 0.16);
+        }
+
+        sealBreak() {
+          this.vibrate([18, 25, 30]);
+          this.tone(260, 780, 0.16, 'square', 0.15);
+        }
+
+        safe() {
+          this.vibrate(12);
+          this.tone(587.33, 880, 0.12, 'sine', 0.12);
+        }
+
+        goal() {
+          this.vibrate([18, 25, 35]);
+          [440, 554.37, 659.25, 880].forEach((f, i) => {
+            setTimeout(() => this.tone(f, f, 0.11, 'square', 0.11), i * 52);
+          });
+        }
+
+        shoot() {
+          this.vibrate([20, 15, 30]);
+          this.tone(180, 720, 0.16, 'sawtooth', 0.16);
+        }
+
+        clack(intensity = 1) {
+          this.vibrate(10);
+          const f = 420 + Math.min(400, intensity * 600);
+          this.tone(f, 110, 0.055, 'triangle', Math.min(0.18, 0.06 + intensity * 0.1));
+        }
+
+        clampSnap() {
+          this.vibrate(8);
+          this.tone(360, 520, 0.06, 'sine', 0.09);
+        }
+
+        toggleMode() {
+          this.vibrate(10);
+          this.tone(420, 640, 0.06, 'sine', 0.1);
+        }
+
+        win() {
+          this.vibrate([35, 35, 35, 80]);
+          [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+            setTimeout(() => this.tone(f, f * 1.02, 0.17, 'sawtooth', 0.14), i * 85);
+          });
+        }
+      }
+
+      const sfx = new SoundEngine();
+
+      /* =========================================================================
+         3. GAME STATE, SEALS & STRIKE PHYSICS CONTROLLERS
+         ========================================================================= */
+      const state = {
+        epoch: 1,
+        gameMode: 'STRIKE_DICE', // 'STRIKE_DICE' | 'CLASSIC'
+        strikeFreq: 4,           // Every 4th full round by default (configurable 1, 2, 4)
+        fastMode: false,
+        round: 1,
+        turnIndex: 0,
+        hasStruckThisTurn: false,
+        // Phases: 'STRIKE_AIM' | 'STRIKE_SIM' | 'STRIKE_CLAMP' | 'ROLL' | 'ROLLING' | 'MOVE' | 'ANIMATING' | 'GAMEOVER'
+        phase: 'STRIKE_AIM',
+        diceValue: null,
+        sixCount: 0,
+        validTokens: [],
+        rankings: [],
+        players: [
+          { mode: 'HUM', tokens: [-1, -1, -1, -1], seals: [0, 0, 0, 0], drought: 0 },
+          { mode: 'CPU', tokens: [-1, -1, -1, -1], seals: [0, 0, 0, 0], drought: 0 },
+          { mode: 'CPU', tokens: [-1, -1, -1, -1], seals: [0, 0, 0, 0], drought: 0 },
+          { mode: 'CPU', tokens: [-1, -1, -1, -1], seals: [0, 0, 0, 0], drought: 0 }
+        ]
+      };
+
+      function isStrikeRound() {
+        return state.gameMode === 'STRIKE_DICE' && (state.round - 1) % state.strikeFreq === 0;
+      }
+
+      // Eligible striker tokens for player pIdx (tokens not already inside their own blocked 6-cell home column or scored;
+      // unsealed tokens in home or on track can act as strikers, and if all home tokens are sealed, they can still strike from home)
+      function getSelectableStrikeTokens(pIdx) {
+        const p = state.players[pIdx];
+        const unsealed = [];
+        const all = [];
+        for (let t = 0; t < 4; t++) {
+          if (p.tokens[t] < 50) {
+            all.push(t);
+            if (p.seals[t] === 0) unsealed.push(t);
+          }
+        }
+        return unsealed.length > 0 ? unsealed : all;
+      }
+
+      const FACE_TARGET_ROT = {
+        1: [0, 0],
+        6: [Math.PI, 0],
+        2: [Math.PI / 2, 0],
+        5: [-Math.PI / 2, 0],
+        3: [0, -Math.PI / 2],
+        4: [0, Math.PI / 2]
+      };
+
+      const anim = {
+        tick: 0,
+        activeHop: null,
+        returningTokens: [],
+        scoringTokens: [],
+        shockwaves: [],
+        particles: [],
+        trails: [],
+        cellPopScales: [
+          [1, 1, 1, 1],
+          [1, 1, 1, 1],
+          [1, 1, 1, 1],
+          [1, 1, 1, 1]
+        ],
+        facePopScales: [1, 1, 1, 1],
+        centerNumbers: [
+          { val: null, scale: 0, alpha: 0 },
+          { val: null, scale: 0, alpha: 0 },
+          { val: null, scale: 0, alpha: 0 },
+          { val: null, scale: 0, alpha: 0 }
+        ],
+        screenShake: 0,
+        lookTarget: { x: 7.5, y: 7.5 },
+        dice: {
+          val: 5,
+          rx: FACE_TARGET_ROT[5][0],
+          ry: FACE_TARGET_ROT[5][1],
+          rz: 0,
+          startRx: 0,
+          startRy: 0,
+          startRz: 0,
+          targetRx: FACE_TARGET_ROT[5][0],
+          targetRy: FACE_TARGET_ROT[5][1],
+          targetRz: 0,
+          zLift: 0,
+          scaleX: 1,
+          scaleY: 1,
+          isTumbling: false
+        },
+        strike: {
+          dragging: false,
+          pointerId: null,
+          tokenIdx: -1,
+          startX: 0,
+          startY: 0,
+          pullX: 0,
+          pullY: 0,
+          bodies: [],
+          clampTweens: []
+        }
+      };
+
+      let cpuTimerId = null;
+      let rollRafId = null;
+      let strikeSimRafId = null;
+
+      function cancelAllAsync() {
+        if (cpuTimerId !== null) {
+          clearTimeout(cpuTimerId);
+          cpuTimerId = null;
+        }
+        if (rollRafId !== null) {
+          cancelAnimationFrame(rollRafId);
+          rollRafId = null;
+        }
+        if (strikeSimRafId !== null) {
+          cancelAnimationFrame(strikeSimRafId);
+          strikeSimRafId = null;
+        }
+        anim.dice.isTumbling = false;
+        anim.dice.zLift = 0;
+        anim.dice.scaleX = 1;
+        anim.dice.scaleY = 1;
+        anim.activeHop = null;
+        anim.strike.dragging = false;
+        anim.strike.bodies = [];
+        anim.strike.clampTweens = [];
+      }
+
+      function stepToGlobalIndex(pIdx, step) {
+        if (step < 0 || step > 50) return -1;
+        return (FACTIONS[pIdx].startOffset + step) % 52;
+      }
+
+      function getBaseTokenXY(pIdx, tIdx, customStep = null) {
+        const step = customStep !== null ? customStep : state.players[pIdx].tokens[tIdx];
+        if (step === -1) {
+          const [x, y] = YARD_SLOTS[pIdx][tIdx];
+          return { x, y };
+        }
+        if (step >= 0 && step <= 50) {
+          const gIdx = stepToGlobalIndex(pIdx, step);
+          const [x, y] = MAIN_TRACK[gIdx];
+          return { x: x + 0.5, y: y + 0.5 };
+        }
+        if (step >= 51 && step <= 55) {
+          const [x, y] = HOME_PATHS[pIdx][step - 51];
+          return { x: x + 0.5, y: y + 0.5 };
+        }
+        const [cx, cy] = CENTER_NUMBER_SLOTS[pIdx];
+        return { x: cx, y: cy };
+      }
+
+      function isPlayerDone(pIdx) {
+        return state.players[pIdx].tokens.every(s => s === 56);
+      }
+
+      function getValidMoves(pIdx, dice) {
+        const tokens = state.players[pIdx].tokens;
+        const valid = [];
+        for (let t = 0; t < 4; t++) {
+          const s = tokens[t];
+          if (s === -1) {
+            // Rolling 6 can either break 1 seal (if seals > 0) or deploy out (if seals === 0)
+            if (dice === 6) valid.push(t);
+          } else if (s + dice <= 56) {
+            valid.push(t);
+          }
+        }
+        return valid;
+      }
+
+      function countDistinctMoves(pIdx, validTokens) {
+        const keys = new Set();
+        const p = state.players[pIdx];
+        for (const t of validTokens) {
+          keys.add(`${p.tokens[t]}:${p.seals[t]}`);
+        }
+        return keys.size;
+      }
+
+      function willMoveCapture(pIdx, targetStep) {
+        if (targetStep < 0 || targetStep > 50) return false;
+        const gIdx = stepToGlobalIndex(pIdx, targetStep);
+        if (SAFE_TRACK_INDICES.has(gIdx)) return false;
+        for (let opp = 0; opp < 4; opp++) {
+          if (opp === pIdx || state.players[opp].mode === 'OFF') continue;
+          for (let ot = 0; ot < 4; ot++) {
+            const os = state.players[opp].tokens[ot];
+            if (os >= 0 && os <= 50 && stepToGlobalIndex(opp, os) === gIdx) {
+              return true;
+            }
+          }
+        }
+        return false;
+      }
+
+      function computeRenderedTokens() {
+        if (state.phase === 'STRIKE_SIM' && anim.strike.bodies.length > 0) {
+          return anim.strike.bodies
+            .filter(b => !b.knockedOut)
+            .map(b => ({
+              p: b.p,
+              t: b.t,
+              step: state.players[b.p].tokens[b.t],
+              seals: state.players[b.p].seals[b.t] || 0,
+              x: b.x,
+              y: b.y,
+              scale: 1.0,
+              isSelectable: false,
+              isStrikeReady: false,
+              destX: null,
+              destY: null,
+              isCaptureMove: false
+            }));
+        }
+
+        if (state.phase === 'STRIKE_CLAMP' && anim.strike.clampTweens.length > 0) {
+          return anim.strike.clampTweens.map(ct => ({
+            p: ct.p,
+            t: ct.t,
+            step: state.players[ct.p].tokens[ct.t],
+            seals: state.players[ct.p].seals[ct.t] || 0,
+            x: ct.fromX + (ct.toX - ct.fromX) * ct.prog,
+            y: ct.fromY + (ct.toY - ct.fromY) * ct.prog,
+            scale: 1.0 + Math.sin(ct.prog * Math.PI) * 0.22,
+            isSelectable: false,
+            isStrikeReady: false,
+            destX: null,
+            destY: null,
+            isCaptureMove: false
+          }));
+        }
+
+        const cellMap = new Map();
+        const strikeAllowed =
+          state.phase === 'STRIKE_AIM' ? getSelectableStrikeTokens(state.turnIndex) : [];
+
+        for (let p = 0; p < 4; p++) {
+          if (state.players[p].mode === 'OFF') continue;
+          for (let t = 0; t < 4; t++) {
+            const step = state.players[p].tokens[t];
+            if (step === 56) continue;
+            if (anim.activeHop && anim.activeHop.p === p && anim.activeHop.t === t) continue;
+            if (anim.returningTokens.some(rt => rt.p === p && rt.t === t)) continue;
+
+            const base = getBaseTokenXY(p, t, step);
+            const seals = state.players[p].seals[t] || 0;
+            const isSelectable =
+              state.phase === 'MOVE' &&
+              p === state.turnIndex &&
+              state.validTokens.includes(t);
+
+            const isStrikeReady =
+              state.phase === 'STRIKE_AIM' &&
+              p === state.turnIndex &&
+              strikeAllowed.includes(t);
+
+            const key = step >= 0 && step <= 55 ? `${Math.floor(base.x)},${Math.floor(base.y)}` : `YARD_${p}_${t}`;
+            if (!cellMap.has(key)) cellMap.set(key, []);
+            cellMap.get(key).push({
+              p,
+              t,
+              step,
+              seals,
+              baseX: base.x,
+              baseY: base.y,
+              isSelectable,
+              isStrikeReady
+            });
+          }
+        }
+
+        const rendered = [];
+        cellMap.forEach(group => {
+          group.sort((a, b) => Number(a.isSelectable || a.isStrikeReady) - Number(b.isSelectable || b.isStrikeReady));
+          const count = group.length;
+
+          group.forEach((item, idx) => {
+            let x = item.baseX;
+            let y = item.baseY;
+            let scale = 1.0;
+
+            if (count > 1 && item.step >= 0 && item.step <= 55) {
+              const table = STACK_OFFSETS[Math.min(4, count)];
+              const [dx, dy] = table[idx % 4];
+              x += dx;
+              y += dy;
+              scale = count === 2 ? 0.78 : count === 3 ? 0.72 : 0.66;
+            }
+
+            let destX = null;
+            let destY = null;
+            let isCaptureMove = false;
+            if (item.isSelectable && state.diceValue !== null) {
+              // If token is at home with seals > 0, rolling a 6 breaks 1 seal in place (stays at home)
+              if (item.step === -1 && item.seals > 0) {
+                destX = null;
+                destY = null;
+              } else {
+                const targetStep = item.step === -1 ? 0 : item.step + state.diceValue;
+                const dest = getBaseTokenXY(item.p, item.t, targetStep);
+                destX = dest.x;
+                destY = dest.y;
+                isCaptureMove = willMoveCapture(item.p, targetStep);
+              }
+            }
+
+            rendered.push({
+              p: item.p,
+              t: item.t,
+              step: item.step,
+              seals: item.seals,
+              x,
+              y,
+              scale,
+              isSelectable: item.isSelectable,
+              isStrikeReady: item.isStrikeReady,
+              destX,
+              destY,
+              isCaptureMove
+            });
+          });
+        });
+
+        return rendered;
+      }
+
+      /* =========================================================================
+         4. PERSISTENCE & SETTINGS UI SYNC
+         ========================================================================= */
+      const quickModeBtn = document.getElementById('quickModeBtn');
+      const quickSpeedBtn = document.getElementById('quickSpeedBtn');
+      const quickSfxBtn = document.getElementById('quickSfxBtn');
+      const quickRestartBtn = document.getElementById('quickRestartBtn');
+      const openSettingsBtn = document.getElementById('openSettingsBtn');
+      const settingsModal = document.getElementById('settingsModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const closeModalBtn = document.getElementById('closeModalBtn');
+      const resumeBtn = document.getElementById('resumeBtn');
+      const restartMatchBtn = document.getElementById('restartMatchBtn');
+      const strikeFreqRow = document.getElementById('strikeFreqRow');
+
+      function syncSettingsUI() {
+        const isStrike = state.gameMode === 'STRIKE_DICE';
+        quickModeBtn.classList.toggle('is-active', isStrike);
+        quickModeBtn.textContent = isStrike ? 'STRIKE' : 'CLASSIC';
+
+        quickSpeedBtn.classList.toggle('is-active', state.fastMode);
+        quickSpeedBtn.textContent = state.fastMode ? '2X' : '1X';
+
+        quickSfxBtn.classList.toggle('is-active', sfx.enabled);
+        quickSfxBtn.textContent = sfx.enabled ? 'SFX' : 'MUTE';
+
+        strikeFreqRow.style.display = isStrike ? 'flex' : 'none';
+
+        document.querySelectorAll('#modeSegGroup .seg-btn').forEach(b => {
+          b.classList.toggle('active', b.getAttribute('data-mode') === state.gameMode);
+        });
+        document.querySelectorAll('#freqSegGroup .seg-btn').forEach(b => {
+          b.classList.toggle('active', Number(b.getAttribute('data-freq')) === state.strikeFreq);
+        });
+        document.querySelectorAll('#speedSegGroup .seg-btn').forEach(b => {
+          b.classList.toggle('active', (b.getAttribute('data-spd') === '2') === state.fastMode);
+        });
+        document.querySelectorAll('#sfxSegGroup .seg-btn').forEach(b => {
+          b.classList.toggle('active', (b.getAttribute('data-sfx') === 'ON') === sfx.enabled);
+        });
+
+        for (let i = 0; i < 4; i++) {
+          const el = document.getElementById(`fModeTxt${i}`);
+          const m = state.players[i].mode;
+          if (el) el.textContent = m === 'CPU' ? 'BOT' : m;
+        }
+      }
+
+      function saveState() {
+        try {
+          const safePhase =
+            state.phase === 'STRIKE_AIM' || state.phase === 'STRIKE_SIM' || state.phase === 'STRIKE_CLAMP'
+              ? 'STRIKE_AIM'
+              : state.phase === 'ANIMATING' || state.phase === 'ROLLING'
+              ? 'ROLL'
+              : state.phase;
+
+          const payload = {
+            gameMode: state.gameMode,
+            strikeFreq: state.strikeFreq,
+            fastMode: state.fastMode,
+            sfxEnabled: sfx.enabled,
+            round: state.round,
+            turnIndex: state.turnIndex,
+            hasStruckThisTurn: state.hasStruckThisTurn,
+            phase: safePhase,
+            diceValue: state.diceValue,
+            sixCount: state.sixCount,
+            rankings: state.rankings,
+            players: state.players
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+        } catch (_) {}
+      }
+
+      function setDieToValueInstant(val) {
+        anim.dice.val = val;
+        const [rx, ry] = FACE_TARGET_ROT[val] || [0, 0];
+        anim.dice.rx = rx;
+        anim.dice.ry = ry;
+        anim.dice.rz = 0;
+      }
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return false;
+          const d = JSON.parse(raw);
+          if (!d || !Array.isArray(d.players) || d.players.length !== 4) return false;
+
+          state.gameMode = d.gameMode === 'CLASSIC' ? 'CLASSIC' : 'STRIKE_DICE';
+          state.strikeFreq = [1, 2, 4].includes(Number(d.strikeFreq)) ? Number(d.strikeFreq) : 4;
+          state.fastMode = !!d.fastMode;
+          sfx.enabled = d.sfxEnabled !== undefined ? !!d.sfxEnabled : true;
+          state.round = d.round || 1;
+          state.turnIndex = d.turnIndex ?? 0;
+          state.hasStruckThisTurn = !!d.hasStruckThisTurn;
+          state.phase = d.phase || (isStrikeRound() ? 'STRIKE_AIM' : 'ROLL');
+          state.diceValue = d.diceValue ?? null;
+          state.sixCount = d.sixCount || 0;
+          state.rankings = Array.isArray(d.rankings) ? d.rankings : [];
+          state.players = d.players.map(p => ({
+            mode: ['HUM', 'CPU', 'OFF'].includes(p.mode) ? p.mode : 'CPU',
+            tokens: Array.isArray(p.tokens) && p.tokens.length === 4 ? p.tokens.map(Number) : [-1, -1, -1, -1],
+            seals: Array.isArray(p.seals) && p.seals.length === 4 ? p.seals.map(s => Math.max(0, Math.min(3, Number(s) || 0))) : [0, 0, 0, 0],
+            drought: p.drought || 0
+          }));
+
+          if (isStrikeRound() && !state.hasStruckThisTurn && state.phase === 'ROLL') {
+            state.phase = 'STRIKE_AIM';
+          }
+
+          if (state.diceValue) {
+            setDieToValueInstant(state.diceValue);
+            showCenterNumber(state.turnIndex, state.diceValue);
+          }
+          if (state.phase === 'MOVE' && state.diceValue) {
+            state.validTokens = getValidMoves(state.turnIndex, state.diceValue);
+            if (state.validTokens.length === 0) {
+              state.phase = 'ROLL';
+              state.diceValue = null;
+            }
+          }
+          return true;
+        } catch (_) {
+          return false;
+        }
+      }
+
+      /* =========================================================================
+         5. TACTICAL AI EVALUATOR (FOR BOTH STRIKE AIMING & DICE MOVES)
+         ========================================================================= */
+      function isGlobalSquareThreatened(gIdx, myPIdx) {
+        if (SAFE_TRACK_INDICES.has(gIdx)) return false;
+        for (let opp = 0; opp < 4; opp++) {
+          if (opp === myPIdx || state.players[opp].mode === 'OFF') continue;
+          for (let ot = 0; ot < 4; ot++) {
+            const os = state.players[opp].tokens[ot];
+            if (os < 0 || os > 50) continue;
+            const oppG = stepToGlobalIndex(opp, os);
+            const dist = (gIdx - oppG + 52) % 52;
+            if (dist >= 1 && dist <= 6 && os + dist <= 50) return true;
+          }
+        }
+        return false;
+      }
+
+      function pickBestAIMove(pIdx, validTokens, dice) {
+        if (validTokens.length === 1) return validTokens[0];
+        let bestT = validTokens[0];
+        let bestScore = -999999;
+
+        const p = state.players[pIdx];
+        const outCount = p.tokens.filter(s => s >= 0 && s < 56).length;
+
+        for (const t of validTokens) {
+          const curStep = p.tokens[t];
+          const curSeals = p.seals[t] || 0;
+          const targetStep = curStep === -1 ? 0 : curStep + dice;
+          let score = 0;
+
+          if (curStep === -1) {
+            if (curSeals === 0) {
+              // Deploying an unsealed token onto the board is higher priority than breaking a seal
+              score += outCount === 0 ? 790 : outCount === 1 ? 590 : 440;
+            } else {
+              // Breaking 1 seal on a sealed token in home
+              score += 310 - curSeals * 20;
+            }
+          } else {
+            if (targetStep === 56) score += 1050;
+            if (curStep <= 50 && targetStep >= 51) score += 540;
+
+            if (targetStep <= 50) {
+              const targetG = stepToGlobalIndex(pIdx, targetStep);
+              if (willMoveCapture(pIdx, targetStep)) score += 920;
+              if (SAFE_TRACK_INDICES.has(targetG)) {
+                score += 350;
+              } else if (isGlobalSquareThreatened(targetG, pIdx)) {
+                score -= 220;
+              }
+            }
+
+            if (curStep >= 0 && curStep <= 50) {
+              const curG = stepToGlobalIndex(pIdx, curStep);
+              if (isGlobalSquareThreatened(curG, pIdx)) {
+                score += 320;
+              } else if (SAFE_TRACK_INDICES.has(curG)) {
+                score -= 90;
+              }
+            }
+
+            score += targetStep * 2.5;
+          }
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestT = t;
+          }
+        }
+
+        return bestT;
+      }
+
+      function executeCPUStrike(pIdx) {
+        if (state.phase !== 'STRIKE_AIM' || state.turnIndex !== pIdx) return;
+        const avail = getSelectableStrikeTokens(pIdx);
+        if (avail.length === 0) {
+          state.hasStruckThisTurn = true;
+          state.phase = 'ROLL';
+          syncTurnFlow();
+          return;
+        }
+
+        const chosenT = avail[Math.floor(Math.random() * avail.length)];
+        const startPos = getBaseTokenXY(pIdx, chosenT);
+
+        // Aim toward forward track cell or an opponent's piece
+        const forwardStep = Math.min(48, Math.max(4, state.players[pIdx].tokens[chosenT] + 8));
+        const forwardGIdx = stepToGlobalIndex(pIdx, forwardStep);
+        let targetX = MAIN_TRACK[forwardGIdx][0] + 0.5;
+        let targetY = MAIN_TRACK[forwardGIdx][1] + 0.5;
+
+        for (let opp = 0; opp < 4; opp++) {
+          if (opp === pIdx || state.players[opp].mode === 'OFF') continue;
+          for (let ot = 0; ot < 4; ot++) {
+            const os = state.players[opp].tokens[ot];
+            if (os >= 0 && os <= 50 && Math.random() < 0.55) {
+              const ePos = getBaseTokenXY(opp, ot, os);
+              targetX = ePos.x;
+              targetY = ePos.y;
+            }
+          }
+        }
+
+        const dx = targetX - startPos.x;
+        const dy = targetY - startPos.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const pullMag = Math.min(2.4, Math.max(1.1, dist * 0.26));
+        const finalPullX = startPos.x - (dx / dist) * pullMag;
+        const finalPullY = startPos.y - (dy / dist) * pullMag;
+
+        const myEpoch = state.epoch;
+        anim.strike.dragging = true;
+        anim.strike.tokenIdx = chosenT;
+        anim.strike.startX = startPos.x;
+        anim.strike.startY = startPos.y;
+        anim.strike.pullX = startPos.x;
+        anim.strike.pullY = startPos.y;
+
+        const t0 = performance.now();
+        const aimDur = state.fastMode ? 200 : 360;
+
+        function cpuAimLoop(now) {
+          if (state.epoch !== myEpoch || state.phase !== 'STRIKE_AIM') return;
+          const p = Math.min(1, (now - t0) / aimDur);
+          const ease = 1 - Math.pow(1 - p, 2);
+          anim.strike.pullX = startPos.x + (finalPullX - startPos.x) * ease;
+          anim.strike.pullY = startPos.y + (finalPullY - startPos.y) * ease;
+          anim.lookTarget = { x: targetX, y: targetY };
+
+          if (p < 1) {
+            requestAnimationFrame(cpuAimLoop);
+          } else {
+            anim.strike.dragging = false;
+            launchStrikeShot(pIdx, chosenT, startPos.x - finalPullX, startPos.y - finalPullY);
+          }
+        }
+        requestAnimationFrame(cpuAimLoop);
+      }
+
+      /* =========================================================================
+         6. STRIKE 2D PHYSICS: +50% POWER, OUT-OF-BOARD KNOCKS, SEALS & STRICT CLAMP
+         ========================================================================= */
+      function collideCircleWithAABB(body, rect) {
+        const [xMin, yMin, xMax, yMax] = rect;
+        const closestX = Math.max(xMin, Math.min(body.x, xMax));
+        const closestY = Math.max(yMin, Math.min(body.y, yMax));
+        const dx = body.x - closestX;
+        const dy = body.y - closestY;
+        const distSq = dx * dx + dy * dy;
+
+        if (distSq < body.r * body.r) {
+          const dist = Math.sqrt(distSq);
+          if (dist > 0.0001) {
+            const nx = dx / dist;
+            const ny = dy / dist;
+            const overlap = body.r - dist;
+            body.x += nx * overlap;
+            body.y += ny * overlap;
+
+            const vn = body.vx * nx + body.vy * ny;
+            if (vn < 0) {
+              body.vx -= (1 + 0.82) * vn * nx;
+              body.vy -= (1 + 0.82) * vn * ny;
+              sfx.clack(Math.abs(vn));
+            }
+          } else {
+            const dLeft = body.x - xMin;
+            const dRight = xMax - body.x;
+            const dTop = body.y - yMin;
+            const dBottom = yMax - body.y;
+            const m = Math.min(dLeft, dRight, dTop, dBottom);
+            if (m === dLeft) {
+              body.x = xMin - body.r;
+              body.vx = -Math.abs(body.vx) * 0.82;
+            } else if (m === dRight) {
+              body.x = xMax + body.r;
+              body.vx = Math.abs(body.vx) * 0.82;
+            } else if (m === dTop) {
+              body.y = yMin - body.r;
+              body.vy = -Math.abs(body.vy) * 0.82;
+            } else {
+              body.y = yMax + body.r;
+              body.vy = Math.abs(body.vy) * 0.82;
+            }
+          }
+        }
+      }
+
+      function launchStrikeShot(pIdx, tIdx, shotDx, shotDy) {
+        if (state.phase !== 'STRIKE_AIM') return;
+        cancelAllAsync();
+
+        const myEpoch = state.epoch;
+        state.phase = 'STRIKE_SIM';
+        sfx.shoot();
+
+        const bodies = [];
+        for (let p = 0; p < 4; p++) {
+          if (state.players[p].mode === 'OFF') continue;
+          for (let t = 0; t < 4; t++) {
+            const s = state.players[p].tokens[t];
+            if (s === 56) continue;
+            const pos = getBaseTokenXY(p, t, s);
+            const lockedInOwnCol = p === pIdx && s >= 50 && s <= 55;
+            bodies.push({
+              p,
+              t,
+              startStep: s, // Remember if piece started in home (s === -1) or on track (s >= 0)
+              x: pos.x,
+              y: pos.y,
+              vx: 0,
+              vy: 0,
+              r: 0.36,
+              moved: false,
+              lockedInOwnCol,
+              knockedOut: false
+            });
+          }
+        }
+
+        for (let i = 0; i < bodies.length; i++) {
+          for (let j = i + 1; j < bodies.length; j++) {
+            if (Math.hypot(bodies[i].x - bodies[j].x, bodies[i].y - bodies[j].y) < 0.05) {
+              bodies[i].x -= 0.16;
+              bodies[i].y -= 0.12;
+              bodies[j].x += 0.16;
+              bodies[j].y += 0.12;
+            }
+          }
+        }
+
+        const striker = bodies.find(b => b.p === pIdx && b.t === tIdx);
+        if (!striker) {
+          state.hasStruckThisTurn = true;
+          state.phase = 'ROLL';
+          syncTurnFlow();
+          return;
+        }
+
+        // MAX STRIKE POWER INCREASED BY 50% (0.62 -> 0.93 max speed, 0.21 -> 0.315 speed/pull)
+        const pullMag = Math.min(3.2, Math.hypot(shotDx, shotDy));
+        const dirX = shotDx / (Math.hypot(shotDx, shotDy) || 1);
+        const dirY = shotDy / (Math.hypot(shotDx, shotDy) || 1);
+        const launchSpeed = Math.min(0.93, pullMag * 0.315);
+
+        striker.vx = dirX * launchSpeed;
+        striker.vy = dirY * launchSpeed;
+        striker.moved = true;
+
+        triggerShockwave(striker.x, striker.y, FACTIONS[pIdx].color, 1.3);
+        burstParticles(striker.x, striker.y, FACTIONS[pIdx].color, 14, 0.12);
+
+        anim.strike.bodies = bodies;
+        // ONLY the active player's 6-cell home column (5 colored + 1 white) acts as a boundary wall
+        const ownColumnBarrier = HOME_COLUMN_BARRIERS[pIdx];
+        let simFrames = 0;
+
+        function simStep() {
+          if (state.epoch !== myEpoch) return;
+          simFrames++;
+
+          const SUBSTEPS = 6;
+          let maxSpeedSq = 0;
+
+          for (let sub = 0; sub < SUBSTEPS; sub++) {
+            for (const b of bodies) {
+              if (b.lockedInOwnCol || b.knockedOut) continue;
+              b.x += b.vx / SUBSTEPS;
+              b.y += b.vy / SUBSTEPS;
+
+              // Bounce off ONLY the active player's 6-cell Home Column (5 colour + 1 white)
+              collideCircleWithAABB(b, ownColumnBarrier);
+
+              // Check if piece is KNOCKED OUT OF THE BOARD (outside 0..15 grid bounds)
+              if (b.x < 0 || b.x > 15 || b.y < 0 || b.y > 15) {
+                b.knockedOut = true;
+                b.vx = 0;
+                b.vy = 0;
+                b.moved = true;
+
+                const edgeX = Math.max(0.2, Math.min(14.8, b.x));
+                const edgeY = Math.max(0.2, Math.min(14.8, b.y));
+                anim.screenShake = 9;
+                triggerShockwave(edgeX, edgeY, FACTIONS[b.p].color, 1.6);
+                burstParticles(edgeX, edgeY, FACTIONS[b.p].color, 20, 0.16);
+
+                // If knocked-out piece was ALREADY in home (startStep === -1), it gets SEALED (+1 up to 3)!
+                if (b.startStep === -1) {
+                  state.players[b.p].seals[b.t] = Math.min(3, (state.players[b.p].seals[b.t] || 0) + 1);
+                  sfx.sealLock();
+                } else {
+                  sfx.capture();
+                }
+
+                // Send knocked-out piece back to its home slot
+                state.players[b.p].tokens[b.t] = -1;
+                animateCapturedReturn(b.p, b.t, { x: edgeX, y: edgeY });
+              }
+            }
+
+            // Elastic Token-to-Token Collisions
+            for (let i = 0; i < bodies.length; i++) {
+              const b1 = bodies[i];
+              if (b1.lockedInOwnCol || b1.knockedOut) continue;
+              for (let j = i + 1; j < bodies.length; j++) {
+                const b2 = bodies[j];
+                if (b2.lockedInOwnCol || b2.knockedOut) continue;
+
+                const dx = b2.x - b1.x;
+                const dy = b2.y - b1.y;
+                const dist = Math.hypot(dx, dy);
+                const minDist = b1.r + b2.r;
+
+                if (dist > 0 && dist < minDist) {
+                  const nx = dx / dist;
+                  const ny = dy / dist;
+                  const overlap = minDist - dist;
+
+                  b1.x -= nx * overlap * 0.5;
+                  b1.y -= ny * overlap * 0.5;
+                  b2.x += nx * overlap * 0.5;
+                  b2.y += ny * overlap * 0.5;
+
+                  const kx = b1.vx - b2.vx;
+                  const ky = b1.vy - b2.vy;
+                  const pVel = nx * kx + ny * ky;
+
+                  if (pVel > 0) {
+                    const restitution = 0.88;
+                    const impulse = pVel * restitution;
+                    b1.vx -= impulse * nx;
+                    b1.vy -= impulse * ny;
+                    b2.vx += impulse * nx;
+                    b2.vy += impulse * ny;
+                    b1.moved = true;
+                    b2.moved = true;
+
+                    const hitX = (b1.x + b2.x) * 0.5;
+                    const hitY = (b1.y + b2.y) * 0.5;
+                    sfx.clack(impulse * 2.2);
+                    anim.screenShake = Math.min(8, impulse * 18);
+                    triggerShockwave(hitX, hitY, '#ffffff', 0.85);
+                    burstParticles(hitX, hitY, FACTIONS[b2.p].color, 8, 0.09);
+                  }
+                }
+              }
+            }
+          }
+
+          const trailColors = ['#ff2e1f', '#00b862', '#ffb800', '#1f5eff'];
+          for (const b of bodies) {
+            if (b.lockedInOwnCol || b.knockedOut) continue;
+            b.vx *= 0.94;
+            b.vy *= 0.94;
+            const spdSq = b.vx * b.vx + b.vy * b.vy;
+            if (spdSq > maxSpeedSq) {
+              maxSpeedSq = spdSq;
+              anim.lookTarget = { x: b.x, y: b.y };
+            }
+            if (spdSq > 0.0012 && simFrames % 2 === 0) {
+              anim.trails.push({
+                x: b.x,
+                y: b.y,
+                color: trailColors[(simFrames + b.t) % 4],
+                alpha: 0.65,
+                sz: 0.42
+              });
+            }
+          }
+
+          if (maxSpeedSq > 0.00025 && simFrames < 150) {
+            strikeSimRafId = requestAnimationFrame(simStep);
+          } else {
+            clampStrikeBodiesToBoard(bodies);
+          }
+        }
+
+        strikeSimRafId = requestAnimationFrame(simStep);
+      }
+
+      // STRICT CELL CLAMPING:
+      // "only when most of the body of a piece is in a cell is it clamped to that cell
+      //  otherwise it stays and works from home (fixing the clamping even when pieces went to other's home)"
+      function computeNearestClampTarget(body) {
+        const { p, t, x, y } = body;
+        const [yx, yy] = YARD_SLOTS[p][t];
+
+        // If the piece is inside ANY of the 4 corner 6x6 yards (its own or another player's home)
+        // or inside the 3x3 center zone, most of its body is NOT in a valid track cell -> stays/returns to own home!
+        const inCornerYard = (x < 6.0 || x > 9.0) && (y < 6.0 || y > 9.0);
+        const inCenterGoal = x >= 6.0 && x <= 9.0 && y >= 6.0 && y <= 9.0;
+        if (inCornerYard || inCenterGoal) {
+          return { step: -1, toX: yx, toY: yy, type: 'YARD' };
+        }
+
+        // Check if most of the piece's body (center within cell bounds and distance <= 0.52) is inside a valid MAIN_TRACK cell (steps 0..49)
+        let bestStep = -1;
+        let bestX = yx;
+        let bestY = yy;
+        let bestDist = Infinity;
+
+        for (let relStep = 0; relStep <= 49; relStep++) {
+          const actualGIdx = stepToGlobalIndex(p, relStep);
+          // Skip the active turn player's blocked white cell
+          if (actualGIdx === stepToGlobalIndex(state.turnIndex, 50)) continue;
+
+          const acx = MAIN_TRACK[actualGIdx][0] + 0.5;
+          const acy = MAIN_TRACK[actualGIdx][1] + 0.5;
+          const dx = Math.abs(x - acx);
+          const dy = Math.abs(y - acy);
+          const ad = Math.hypot(dx, dy);
+
+          // Most of the piece's circular body is inside this 1x1 cell only if its center is within the cell (dx <= 0.5, dy <= 0.5)
+          if (dx <= 0.52 && dy <= 0.52 && ad < bestDist) {
+            bestDist = ad;
+            bestStep = relStep;
+            bestX = acx;
+            bestY = acy;
+          }
+        }
+
+        if (bestStep !== -1) {
+          return { step: bestStep, toX: bestX, toY: bestY, type: 'TRACK' };
+        }
+
+        // Otherwise (e.g., landed on another player's colored home stretch or outside valid cells), return to own home!
+        return { step: -1, toX: yx, toY: yy, type: 'YARD' };
+      }
+
+      function clampStrikeBodiesToBoard(bodies) {
+        const myEpoch = state.epoch;
+        state.phase = 'STRIKE_CLAMP';
+
+        const tweens = [];
+
+        for (const b of bodies) {
+          if (b.knockedOut) continue;
+          if (b.moved && !b.lockedInOwnCol) {
+            const target = computeNearestClampTarget(b);
+            // If a piece that was on the track (or shot into another player's yard) is sent back to home (-1),
+            // tween it smoothly back to its own home hangar slot
+            tweens.push({
+              p: b.p,
+              t: b.t,
+              fromX: b.x,
+              fromY: b.y,
+              toX: target.toX,
+              toY: target.toY,
+              targetStep: target.step,
+              targetType: target.type,
+              prog: 0,
+              wasMoved: true
+            });
+          } else {
+            const curPos = getBaseTokenXY(b.p, b.t);
+            tweens.push({
+              p: b.p,
+              t: b.t,
+              fromX: b.x,
+              fromY: b.y,
+              toX: curPos.x,
+              toY: curPos.y,
+              targetStep: state.players[b.p].tokens[b.t],
+              targetType: 'STATIC',
+              prog: 1,
+              wasMoved: false
+            });
+          }
+        }
+
+        anim.strike.bodies = [];
+        anim.strike.clampTweens = tweens;
+        sfx.clampSnap();
+
+        const dur = state.fastMode ? 130 : 220;
+        const t0 = performance.now();
+
+        function clampLoop(now) {
+          if (state.epoch !== myEpoch) return;
+          const p = Math.min(1, (now - t0) / dur);
+          const ease = 1 - Math.pow(1 - p, 3);
+          for (const tw of tweens) {
+            if (tw.wasMoved) tw.prog = ease;
+          }
+
+          if (p < 1) {
+            requestAnimationFrame(clampLoop);
+          } else {
+            anim.strike.clampTweens = [];
+
+            for (const tw of tweens) {
+              if (!tw.wasMoved) continue;
+              state.players[tw.p].tokens[tw.t] = tw.targetStep;
+              triggerShockwave(tw.toX, tw.toY, FACTIONS[tw.p].color, 0.75);
+
+              if (tw.targetStep >= 0 && tw.targetStep <= 50) {
+                const gIdx = stepToGlobalIndex(tw.p, tw.targetStep);
+                if (!SAFE_TRACK_INDICES.has(gIdx)) {
+                  for (let opp = 0; opp < 4; opp++) {
+                    if (opp === tw.p || state.players[opp].mode === 'OFF') continue;
+                    for (let ot = 0; ot < 4; ot++) {
+                      const os = state.players[opp].tokens[ot];
+                      if (os >= 0 && os <= 50 && stepToGlobalIndex(opp, os) === gIdx) {
+                        const enemyXY = getBaseTokenXY(opp, ot, os);
+                        state.players[opp].tokens[ot] = -1;
+                        animateCapturedReturn(opp, ot, enemyXY);
+                        sfx.capture();
+                        burstParticles(enemyXY.x, enemyXY.y, FACTIONS[opp].color, 18, 0.14);
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            // Now the player gets to roll the dice and play normally!
+            state.hasStruckThisTurn = true;
+            state.phase = 'ROLL';
+            syncTurnFlow();
+          }
+        }
+
+        requestAnimationFrame(clampLoop);
+      }
+
+      /* =========================================================================
+         7. JUICY VISUAL EFFECTS HELPERS
+         ========================================================================= */
+      function showCenterNumber(pIdx, val) {
+        for (let i = 0; i < 4; i++) {
+          if (i !== pIdx) {
+            anim.centerNumbers[i].val = null;
+            anim.centerNumbers[i].scale = 0;
+            anim.centerNumbers[i].alpha = 0;
+          }
+        }
+        const cn = anim.centerNumbers[pIdx];
+        cn.val = val;
+        cn.alpha = 1;
+        cn.scale = 1;
+        const t0 = performance.now();
+        const dur = 360;
+
+        function popLoop(now) {
+          const p = Math.min(1, (now - t0) / dur);
+          const c4 = (2 * Math.PI) / 3;
+          cn.scale = p === 0 ? 0.2 : p === 1 ? 1 : Math.pow(2, -9 * p) * Math.sin((p * 10 - 0.75) * c4) + 1;
+          if (p < 1 && cn.val === val) requestAnimationFrame(popLoop);
+        }
+        requestAnimationFrame(popLoop);
+      }
+
+      function fadeOutCenterNumber(pIdx) {
+        const cn = anim.centerNumbers[pIdx];
+        if (cn.val === null) return;
+        const startVal = cn.val;
+        const t0 = performance.now();
+        const dur = 260;
+        function fadeLoop(now) {
+          if (cn.val !== startVal) return;
+          const p = Math.min(1, (now - t0) / dur);
+          cn.alpha = 1 - p;
+          cn.scale = 1 - p * 0.35;
+          if (p < 1) {
+            requestAnimationFrame(fadeLoop);
+          } else {
+            cn.val = null;
+          }
+        }
+        requestAnimationFrame(fadeLoop);
+      }
+
+      function triggerShockwave(x, y, color, maxR = 1.45) {
+        const sw = { x, y, color, progress: 0, maxR };
+        anim.shockwaves.push(sw);
+        const t0 = performance.now();
+        function swStep(now) {
+          sw.progress = Math.min(1, (now - t0) / 380);
+          if (sw.progress < 1) {
+            requestAnimationFrame(swStep);
+          } else {
+            const idx = anim.shockwaves.indexOf(sw);
+            if (idx !== -1) anim.shockwaves.splice(idx, 1);
+          }
+        }
+        requestAnimationFrame(swStep);
+      }
+
+      function burstParticles(x, y, color, count = 16, speed = 0.11) {
+        for (let i = 0; i < count; i++) {
+          const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+          const spd = speed * (0.45 + Math.random() * 0.85);
+          anim.particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * spd,
+            vy: Math.sin(angle) * spd,
+            color: i % 3 === 0 ? '#ffffff' : color,
+            size: 0.12 + Math.random() * 0.12,
+            alpha: 1,
+            decay: 0.024 + Math.random() * 0.018,
+            rot: Math.random() * Math.PI * 2,
+            vrot: (Math.random() - 0.5) * 0.25
+          });
+        }
+      }
+
+      function popYardFace(pIdx) {
+        const t0 = performance.now();
+        function loop(now) {
+          const p = Math.min(1, (now - t0) / 340);
+          anim.facePopScales[pIdx] = 1 + Math.sin(p * Math.PI * 2) * (1 - p) * 0.35;
+          if (p < 1) {
+            requestAnimationFrame(loop);
+          } else {
+            anim.facePopScales[pIdx] = 1;
+          }
+        }
+        requestAnimationFrame(loop);
+      }
+
+      function popScoreCell(pIdx, cellIdx) {
+        const t0 = performance.now();
+        function loop(now) {
+          const p = Math.min(1, (now - t0) / 420);
+          const c4 = (2 * Math.PI) / 3;
+          anim.cellPopScales[pIdx][cellIdx] =
+            p === 0 ? 0.3 : p === 1 ? 1 : Math.pow(2, -8 * p) * Math.sin((p * 10 - 0.75) * c4) + 1;
+          if (p < 1) {
+            requestAnimationFrame(loop);
+          } else {
+            anim.cellPopScales[pIdx][cellIdx] = 1;
+          }
+        }
+        requestAnimationFrame(loop);
+      }
+
+      /* =========================================================================
+         8. TURN ENGINE, 3D DICE ROLL, SEAL BREAKING & HOP ANIMATIONS
+         ========================================================================= */
+      function syncTurnFlow() {
+        cancelAllAsync();
+        if (isStrikeRound() && !state.hasStruckThisTurn && state.phase === 'ROLL') {
+          if (getSelectableStrikeTokens(state.turnIndex).length > 0) {
+            state.phase = 'STRIKE_AIM';
+          } else {
+            state.hasStruckThisTurn = true;
+          }
+        }
+        syncSettingsUI();
+        saveState();
+
+        if (state.phase === 'GAMEOVER') return;
+
+        const curP = state.players[state.turnIndex];
+        const myEpoch = state.epoch;
+        const delay = state.fastMode ? 200 : 380;
+
+        if (curP.mode === 'CPU') {
+          if (state.phase === 'STRIKE_AIM') {
+            cpuTimerId = setTimeout(() => {
+              if (state.epoch === myEpoch) executeCPUStrike(state.turnIndex);
+            }, delay);
+          } else if (state.phase === 'ROLL') {
+            cpuTimerId = setTimeout(() => {
+              if (state.epoch === myEpoch) startDiceRoll();
+            }, delay);
+          } else if (state.phase === 'MOVE') {
+            cpuTimerId = setTimeout(() => {
+              if (state.epoch !== myEpoch) return;
+              const chosen = pickBestAIMove(state.turnIndex, state.validTokens, state.diceValue);
+              performTokenMove(state.turnIndex, chosen);
+            }, delay);
+          }
+        }
+      }
+
+      function startDiceRoll() {
+        if (state.phase !== 'ROLL') return;
+        sfx.init();
+        cancelAllAsync();
+
+        const myEpoch = state.epoch;
+        const pIdx = state.turnIndex;
+        const p = state.players[pIdx];
+
+        state.phase = 'ROLLING';
+        anim.lookTarget = { x: 7.5, y: 7.5 };
+
+        const allInYard = p.tokens.every(s => s === -1);
+        let finalVal = Math.floor(Math.random() * 6) + 1;
+        if (allInYard && p.drought >= 3 && Math.random() < 0.45) {
+          finalVal = 6;
+        }
+
+        const d = anim.dice;
+        d.isTumbling = true;
+        d.val = finalVal;
+        d.startRx = d.rx;
+        d.startRy = d.ry;
+        d.startRz = d.rz;
+
+        const [baseTargetRx, baseTargetRy] = FACE_TARGET_ROT[finalVal];
+        const spinsX = (2 + Math.floor(Math.random() * 2)) * Math.PI * 2;
+        const spinsY = (2 + Math.floor(Math.random() * 2)) * Math.PI * 2;
+        const spinsZ = Math.PI * 2;
+
+        d.targetRx = baseTargetRx + spinsX;
+        d.targetRy = baseTargetRy + spinsY;
+        d.targetRz = spinsZ;
+
+        const dur = state.fastMode ? 300 : 520;
+        const t0 = performance.now();
+        let lastTickStep = 0;
+
+        function rollStep(now) {
+          if (state.epoch !== myEpoch) return;
+          const prog = Math.min(1, (now - t0) / dur);
+
+          const easeRot = 1 - Math.pow(1 - prog, 3.2);
+          d.rx = d.startRx + (d.targetRx - d.startRx) * easeRot;
+          d.ry = d.startRy + (d.targetRy - d.startRy) * easeRot;
+          d.rz = d.startRz + (d.targetRz - d.startRz) * easeRot;
+
+          if (prog < 0.78) {
+            const arcP = prog / 0.78;
+            d.zLift = Math.sin(arcP * Math.PI);
+            d.scaleX = 1;
+            d.scaleY = 1;
+          } else {
+            d.zLift = 0;
+            const bounceP = (prog - 0.78) / 0.22;
+            const squash = Math.sin(bounceP * Math.PI) * 0.18;
+            d.scaleX = 1 + squash;
+            d.scaleY = 1 - squash * 0.75;
+          }
+
+          const curTickStep = Math.floor(prog * 7);
+          if (curTickStep > lastTickStep && prog < 0.82) {
+            lastTickStep = curTickStep;
+            sfx.tick();
+          }
+
+          if (prog < 1) {
+            rollRafId = requestAnimationFrame(rollStep);
+          } else {
+            d.isTumbling = false;
+            d.rx = baseTargetRx;
+            d.ry = baseTargetRy;
+            d.rz = 0;
+            d.zLift = 0;
+            d.scaleX = 1;
+            d.scaleY = 1;
+            completeDiceRoll(finalVal);
+          }
+        }
+
+        rollRafId = requestAnimationFrame(rollStep);
+      }
+
+      function completeDiceRoll(val) {
+        const myEpoch = state.epoch;
+        const pIdx = state.turnIndex;
+        const p = state.players[pIdx];
+
+        state.diceValue = val;
+        sfx.lockDie(val);
+
+        showCenterNumber(pIdx, val);
+        triggerShockwave(7.5, 7.5, FACTIONS[pIdx].color, val === 6 ? 1.85 : 1.25);
+        if (val === 6) {
+          burstParticles(7.5, 7.5, FACTIONS[pIdx].color, 18, 0.13);
+        }
+
+        if (val === 6) {
+          state.sixCount++;
+          p.drought = 0;
+        } else {
+          state.sixCount = 0;
+          p.drought++;
+        }
+
+        if (state.sixCount >= 3) {
+          cpuTimerId = setTimeout(() => {
+            if (state.epoch === myEpoch) passTurnToNextPlayer();
+          }, state.fastMode ? 400 : 720);
+          return;
+        }
+
+        const valid = getValidMoves(pIdx, val);
+        state.validTokens = valid;
+
+        if (valid.length === 0) {
+          cpuTimerId = setTimeout(() => {
+            if (state.epoch === myEpoch) passTurnToNextPlayer();
+          }, state.fastMode ? 380 : 680);
+          return;
+        }
+
+        state.phase = 'MOVE';
+        const distinctChoices = countDistinctMoves(pIdx, valid);
+
+        if (distinctChoices === 1) {
+          cpuTimerId = setTimeout(() => {
+            if (state.epoch === myEpoch) performTokenMove(pIdx, valid[0]);
+          }, state.fastMode ? 130 : 230);
+          return;
+        }
+
+        syncTurnFlow();
+      }
+
+      function performTokenMove(pIdx, tIdx) {
+        if (state.phase !== 'MOVE' || pIdx !== state.turnIndex) return;
+        if (!state.validTokens.includes(tIdx)) return;
+
+        cancelAllAsync();
+        const myEpoch = state.epoch;
+        state.phase = 'ANIMATING';
+        state.validTokens = [];
+
+        const p = state.players[pIdx];
+        const startStep = p.tokens[tIdx];
+        const curSeals = p.seals[tIdx] || 0;
+        const dice = state.diceValue;
+
+        // Case A0: Token is in Home (-1) with Seals > 0 -> Rolling 6 breaks 1 seal and remains in Home!
+        if (startStep === -1 && curSeals > 0) {
+          const c0 = getBaseTokenXY(pIdx, tIdx, -1);
+          p.seals[tIdx] = Math.max(0, curSeals - 1);
+          sfx.sealBreak();
+          anim.screenShake = 6;
+          triggerShockwave(c0.x, c0.y, '#0a0a0c', 1.15);
+          burstParticles(c0.x, c0.y, '#0a0a0c', 16, 0.12);
+
+          const dur = state.fastMode ? 140 : 240;
+          const t0 = performance.now();
+
+          function breakAnim(now) {
+            if (state.epoch !== myEpoch) return;
+            const prog = Math.min(1, (now - t0) / dur);
+            const pop = 1 + Math.sin(prog * Math.PI) * 0.35;
+            anim.activeHop = {
+              p: pIdx,
+              t: tIdx,
+              x: c0.x,
+              y: c0.y,
+              scaleX: pop,
+              scaleY: pop
+            };
+            if (prog < 1) {
+              requestAnimationFrame(breakAnim);
+            } else {
+              anim.activeHop = null;
+              finishTurnResolution(pIdx, false, false);
+            }
+          }
+          requestAnimationFrame(breakAnim);
+          return;
+        }
+
+        // Case A1: Unsealed Token in Home (-1) with Seals === 0 -> Deploys onto Start Square (0)
+        if (startStep === -1) {
+          const c0 = getBaseTokenXY(pIdx, tIdx, -1);
+          const c1 = getBaseTokenXY(pIdx, tIdx, 0);
+          const dur = state.fastMode ? 140 : 240;
+          const t0 = performance.now();
+          sfx.deploy();
+
+          function deployAnim(now) {
+            if (state.epoch !== myEpoch) return;
+            const prog = Math.min(1, (now - t0) / dur);
+            const ease = 1 - Math.pow(1 - prog, 3);
+            const curX = c0.x + (c1.x - c0.x) * ease;
+            const curY = c0.y + (c1.y - c0.y) * ease;
+            const lift = Math.sin(prog * Math.PI);
+            anim.lookTarget = { x: curX, y: curY };
+            anim.activeHop = {
+              p: pIdx,
+              t: tIdx,
+              x: curX,
+              y: curY,
+              scaleX: 1 + lift * 0.38,
+              scaleY: 1 + lift * 0.38
+            };
+            if (prog < 1) {
+              requestAnimationFrame(deployAnim);
+            } else {
+              anim.activeHop = null;
+              state.players[pIdx].tokens[tIdx] = 0;
+              triggerShockwave(c1.x, c1.y, FACTIONS[pIdx].color, 0.85);
+              evaluateLanding(pIdx, tIdx, 0);
+            }
+          }
+          requestAnimationFrame(deployAnim);
+          return;
+        }
+
+        // Case B: Track / Home-Stretch Hopping
+        const targetStep = startStep + dice;
+        let curStep = startStep;
+        const hopMs = state.fastMode ? 45 : 82;
+
+        function nextHop() {
+          if (state.epoch !== myEpoch) return;
+          const fromS = curStep;
+          const toS = fromS + 1;
+          const c0 = getBaseTokenXY(pIdx, tIdx, fromS);
+          const c1 = getBaseTokenXY(pIdx, tIdx, toS);
+          const t0 = performance.now();
+          sfx.hop(toS);
+
+          function hopAnim(now) {
+            if (state.epoch !== myEpoch) return;
+            const prog = Math.min(1, (now - t0) / hopMs);
+            const curX = c0.x + (c1.x - c0.x) * prog;
+            const curY = c0.y + (c1.y - c0.y) * prog;
+            const arc = Math.sin(prog * Math.PI);
+            anim.lookTarget = { x: curX, y: curY };
+            anim.activeHop = {
+              p: pIdx,
+              t: tIdx,
+              x: curX,
+              y: curY - arc * 0.22,
+              scaleX: 1 + arc * 0.26,
+              scaleY: 1 + arc * 0.34
+            };
+            if (prog < 1) {
+              requestAnimationFrame(hopAnim);
+            } else {
+              curStep = toS;
+              state.players[pIdx].tokens[tIdx] = curStep;
+              if (curStep < targetStep) {
+                nextHop();
+              } else {
+                anim.activeHop = null;
+                evaluateLanding(pIdx, tIdx, targetStep);
+              }
+            }
+          }
+          requestAnimationFrame(hopAnim);
+        }
+
+        nextHop();
+      }
+
+      function animateCapturedReturn(oppP, oppT, fromXY) {
+        const myEpoch = state.epoch;
+        const toXY = getBaseTokenXY(oppP, oppT, -1);
+        const dur = state.fastMode ? 220 : 360;
+        const t0 = performance.now();
+        const obj = { p: oppP, t: oppT, x: fromXY.x, y: fromXY.y };
+        anim.returningTokens.push(obj);
+
+        function zipStep(now) {
+          if (state.epoch !== myEpoch) return;
+          const prog = Math.min(1, (now - t0) / dur);
+          const ease = 1 - Math.pow(1 - prog, 3);
+          obj.x = fromXY.x + (toXY.x - fromXY.x) * ease;
+          obj.y = fromXY.y + (toXY.y - fromXY.y) * ease - Math.sin(prog * Math.PI) * 1.1;
+          if (prog < 1) {
+            requestAnimationFrame(zipStep);
+          } else {
+            const idx = anim.returningTokens.indexOf(obj);
+            if (idx !== -1) anim.returningTokens.splice(idx, 1);
+            triggerShockwave(toXY.x, toXY.y, FACTIONS[oppP].color, 0.75);
+          }
+        }
+        requestAnimationFrame(zipStep);
+      }
+
+      function animatePieceToScoreCell(pIdx, cellIdx, fromXY, onComplete) {
+        const myEpoch = state.epoch;
+        const targetRect = getScoreCellRect(pIdx, cellIdx);
+        const dur = state.fastMode ? 220 : 380;
+        const t0 = performance.now();
+        const flyer = { p: pIdx, cellIdx, x: fromXY.x, y: fromXY.y, scale: 1 };
+        anim.scoringTokens.push(flyer);
+
+        function flyStep(now) {
+          if (state.epoch !== myEpoch) return;
+          const prog = Math.min(1, (now - t0) / dur);
+          const ease = 1 - Math.pow(1 - prog, 3);
+          const arc = Math.sin(prog * Math.PI);
+          flyer.x = fromXY.x + (targetRect.cx - fromXY.x) * ease;
+          flyer.y = fromXY.y + (targetRect.cy - fromXY.y) * ease - arc * 1.4;
+          flyer.scale = 1 + arc * 0.45 - prog * 0.25;
+          anim.lookTarget = { x: flyer.x, y: flyer.y };
+
+          if (prog < 1) {
+            requestAnimationFrame(flyStep);
+          } else {
+            const idx = anim.scoringTokens.indexOf(flyer);
+            if (idx !== -1) anim.scoringTokens.splice(idx, 1);
+            popScoreCell(pIdx, cellIdx);
+            popYardFace(pIdx);
+            triggerShockwave(targetRect.cx, targetRect.cy, FACTIONS[pIdx].color, 1.35);
+            burstParticles(targetRect.cx, targetRect.cy, FACTIONS[pIdx].color, 20, 0.14);
+            if (onComplete) onComplete();
+          }
+        }
+        requestAnimationFrame(flyStep);
+      }
+
+      function evaluateLanding(pIdx, tIdx, landedStep) {
+        let capturedEnemy = false;
+        const reachedGoal = landedStep === 56;
+
+        if (reachedGoal) {
+          const gXY = getBaseTokenXY(pIdx, tIdx, 56);
+          const scoredCount = state.players[pIdx].tokens.filter(s => s === 56).length;
+          const targetCellIdx = Math.max(0, Math.min(3, scoredCount - 1));
+          sfx.goal();
+          triggerShockwave(gXY.x, gXY.y, FACTIONS[pIdx].color, 1.2);
+
+          animatePieceToScoreCell(pIdx, targetCellIdx, gXY, () => {
+            finishTurnResolution(pIdx, false, true);
+          });
+          return;
+        }
+
+        if (landedStep >= 0 && landedStep <= 50) {
+          const gIdx = stepToGlobalIndex(pIdx, landedStep);
+          if (!SAFE_TRACK_INDICES.has(gIdx)) {
+            for (let opp = 0; opp < 4; opp++) {
+              if (opp === pIdx || state.players[opp].mode === 'OFF') continue;
+              for (let ot = 0; ot < 4; ot++) {
+                const os = state.players[opp].tokens[ot];
+                if (os >= 0 && os <= 50 && stepToGlobalIndex(opp, os) === gIdx) {
+                  const enemyXY = getBaseTokenXY(opp, ot, os);
+                  state.players[opp].tokens[ot] = -1;
+                  animateCapturedReturn(opp, ot, enemyXY);
+                  triggerShockwave(enemyXY.x, enemyXY.y, FACTIONS[pIdx].color, 1.6);
+                  burstParticles(enemyXY.x, enemyXY.y, FACTIONS[opp].color, 22, 0.15);
+                  anim.screenShake = 8;
+                  capturedEnemy = true;
+                }
+              }
+            }
+          } else {
+            sfx.safe();
+            const safeXY = getBaseTokenXY(pIdx, tIdx, landedStep);
+            triggerShockwave(safeXY.x, safeXY.y, '#ffffff', 0.9);
+          }
+        }
+
+        if (capturedEnemy) {
+          sfx.capture();
+          popYardFace(pIdx);
+        }
+
+        finishTurnResolution(pIdx, capturedEnemy, false);
+      }
+
+      function finishTurnResolution(pIdx, capturedEnemy, reachedGoal) {
+        if (isPlayerDone(pIdx) && !state.rankings.includes(pIdx)) {
+          state.rankings.push(pIdx);
+          sfx.win();
+
+          const stillPlaying = [0, 1, 2, 3].filter(
+            i => state.players[i].mode !== 'OFF' && !isPlayerDone(i)
+          );
+
+          if (stillPlaying.length <= 1) {
+            if (stillPlaying.length === 1 && !state.rankings.includes(stillPlaying[0])) {
+              state.rankings.push(stillPlaying[0]);
+            }
+            state.phase = 'GAMEOVER';
+            saveState();
+            const winner = state.rankings[0];
+            burstParticles(7.5, 7.5, FACTIONS[winner].color, 40, 0.22);
+            setTimeout(() => openSettingsModal(winner), 550);
+            return;
+          }
+        }
+
+        const earnedBonus = (state.diceValue === 6 || capturedEnemy || reachedGoal) && !isPlayerDone(pIdx);
+
+        if (earnedBonus) {
+          state.phase = 'ROLL';
+          state.diceValue = null;
+          syncTurnFlow();
+        } else {
+          passTurnToNextPlayer();
+        }
+      }
+
+      function passTurnToNextPlayer() {
+        const prevTurn = state.turnIndex;
+        fadeOutCenterNumber(prevTurn);
+
+        state.sixCount = 0;
+        state.diceValue = null;
+        state.validTokens = [];
+        state.hasStruckThisTurn = false;
+
+        for (let step = 1; step <= 4; step++) {
+          const candidate = (state.turnIndex + step) % 4;
+          if (state.players[candidate].mode !== 'OFF' && !isPlayerDone(candidate)) {
+            if (state.turnIndex + step >= 4) {
+              state.round++;
+            }
+            state.turnIndex = candidate;
+            const nowStrike = isStrikeRound();
+            state.phase = nowStrike && getSelectableStrikeTokens(candidate).length > 0 ? 'STRIKE_AIM' : 'ROLL';
+            const [cx, cy] = YARD_CENTERS[candidate];
+            anim.lookTarget = { x: cx, y: cy };
+            syncTurnFlow();
+            return;
+          }
+        }
+
+        state.phase = 'GAMEOVER';
+      }
+
+      /* =========================================================================
+         9. BOARD, 3D DIE, SCORE CELLS, SEALS & HUMAN/BOT LOGOS
+         ========================================================================= */
+      const boardCanvas = document.getElementById('ludoCanvas');
+      const bCtx = boardCanvas.getContext('2d');
+      let boardPx = 0;
+      let cellPx = 0;
+
+      function resizeCanvases() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+        const bRect = boardCanvas.getBoundingClientRect();
+        if (bRect.width > 0 && bRect.height > 0) {
+          const sq = Math.round(Math.min(bRect.width, bRect.height) * dpr);
+          boardCanvas.width = sq;
+          boardCanvas.height = sq;
+          boardPx = sq;
+          cellPx = sq / 15;
+        }
+      }
+
+      function drawStar(ctx, cx, cy, outerR, innerR) {
+        ctx.save();
+        ctx.beginPath();
+        for (let i = 0; i < 16; i++) {
+          const r = i % 2 === 0 ? outerR : innerR;
+          const a = (i * Math.PI) / 8 - Math.PI / 2;
+          const x = cx + Math.cos(a) * r;
+          const y = cy + Math.sin(a) * r;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.lineWidth = Math.max(1.5, cellPx * 0.055);
+        ctx.strokeStyle = '#0a0a0c';
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawChevron(ctx, x, y, angle) {
+        const cx = (x + 0.5) * cellPx;
+        const cy = (y + 0.5) * cellPx;
+        const sz = cellPx * 0.27;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.moveTo(-sz, -sz * 0.78);
+        ctx.lineTo(sz, 0);
+        ctx.lineTo(-sz, sz * 0.78);
+        ctx.closePath();
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.lineWidth = Math.max(1.5, cellPx * 0.055);
+        ctx.strokeStyle = '#0a0a0c';
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawYardCenterLogo(ctx, pIdx) {
+        const u = cellPx;
+        const [gx, gy] = YARD_CENTERS[pIdx];
+        const cx = gx * u;
+        const cy = gy * u;
+        const mode = state.players[pIdx].mode;
+        const isTurn = state.turnIndex === pIdx && state.phase !== 'GAMEOVER';
+        const popScale = anim.facePopScales[pIdx] || 1;
+        const idleBounce = isTurn ? Math.sin(anim.tick * 0.11) * (u * 0.04) : 0;
+
+        const dx = anim.lookTarget.x - gx;
+        const dy = anim.lookTarget.y - gy;
+        const dist = Math.hypot(dx, dy) || 1;
+        const lookX = (dx / dist) * u * 0.045;
+        const lookY = (dy / dist) * u * 0.045;
+
+        const blinkCycle = (anim.tick + pIdx * 47) % 190;
+        const isBlinking = blinkCycle > 182;
+
+        ctx.save();
+        ctx.translate(cx, cy + idleBounce);
+        ctx.scale(popScale, popScale);
+
+        const eyeOffsetX = u * 0.34;
+        const eyeOffsetY = -u * 0.17;
+        const strokeW = Math.max(2.5, u * 0.095);
+
+        ctx.fillStyle = '#0a0a0c';
+        ctx.strokeStyle = '#0a0a0c';
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        if (mode === 'HUM') {
+          const eyeR = u * 0.115;
+          [-1, 1].forEach(dir => {
+            const ex = dir * eyeOffsetX + lookX;
+            const ey = eyeOffsetY + lookY;
+            if (isBlinking) {
+              ctx.lineWidth = strokeW * 0.85;
+              ctx.beginPath();
+              ctx.moveTo(ex - eyeR, ey);
+              ctx.lineTo(ex + eyeR, ey);
+              ctx.stroke();
+            } else {
+              ctx.beginPath();
+              ctx.arc(ex, ey, eyeR, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          });
+
+          ctx.lineWidth = strokeW;
+          ctx.beginPath();
+          ctx.arc(lookX * 0.4, u * 0.12 + lookY * 0.4, u * 0.25, 0.12 * Math.PI, 0.88 * Math.PI, false);
+          ctx.stroke();
+        } else if (mode === 'CPU') {
+          const bw = u * 0.23;
+          const bh = isBlinking ? u * 0.05 : u * 0.21;
+          [-1, 1].forEach(dir => {
+            const ex = dir * (u * 0.26) + lookX * 0.7;
+            const ey = eyeOffsetY + lookY * 0.7;
+            ctx.save();
+            ctx.translate(ex, ey);
+            ctx.rotate(dir * -0.05);
+            ctx.beginPath();
+            if (ctx.roundRect) {
+              ctx.roundRect(-bw / 2, -bh / 2, bw, bh, u * 0.045);
+            } else {
+              ctx.rect(-bw / 2, -bh / 2, bw, bh);
+            }
+            ctx.fill();
+            ctx.restore();
+          });
+
+          const mw = isTurn ? u * 0.36 + Math.sin(anim.tick * 0.22) * u * 0.05 : u * 0.34;
+          const mh = u * 0.125;
+          const mx = -mw / 2 + lookX * 0.35;
+          const my = u * 0.19 + lookY * 0.35;
+          ctx.beginPath();
+          if (ctx.roundRect) {
+            ctx.roundRect(mx, my, mw, mh, mh * 0.5);
+          } else {
+            ctx.rect(mx, my, mw, mh);
+          }
+          ctx.fill();
+        } else {
+          ctx.globalAlpha = 0.4;
+          ctx.lineWidth = strokeW * 0.8;
+          [-1, 1].forEach(dir => {
+            const ex = dir * eyeOffsetX;
+            ctx.beginPath();
+            ctx.moveTo(ex - u * 0.12, eyeOffsetY);
+            ctx.lineTo(ex + u * 0.12, eyeOffsetY);
+            ctx.stroke();
+          });
+          ctx.beginPath();
+          ctx.arc(0, u * 0.2, u * 0.06, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+
+      function drawYardScoreCells(ctx, pIdx, thinW, thickW) {
+        const u = cellPx;
+        const f = FACTIONS[pIdx];
+        const scoredCount = state.players[pIdx].tokens.filter(s => s === 56).length;
+        const inFlightCount = anim.scoringTokens.filter(st => st.p === pIdx).length;
+        const filledCells = Math.max(0, scoredCount - inFlightCount);
+
+        for (let c = 0; c < 4; c++) {
+          const rect = getScoreCellRect(pIdx, c);
+          const isFilled = c < filledCells;
+          const popScale = anim.cellPopScales[pIdx][c] || 1;
+
+          const rx = rect.x * u;
+          const ry = rect.y * u;
+          const rw = rect.w * u;
+          const rh = rect.h * u;
+          const rcx = rect.cx * u;
+          const rcy = rect.cy * u;
+
+          ctx.save();
+          if (popScale !== 1) {
+            ctx.translate(rcx, rcy);
+            ctx.scale(popScale, popScale);
+            ctx.translate(-rcx, -rcy);
+          }
+
+          ctx.fillStyle = isFilled ? f.tint : '#ffffff';
+          ctx.fillRect(rx, ry, rw, rh);
+
+          if (isFilled) {
+            const inset = rw * 0.11;
+            ctx.fillStyle = f.color;
+            ctx.fillRect(rx + inset, ry + inset, rw - inset * 2, rh - inset * 2);
+
+            ctx.beginPath();
+            ctx.arc(rcx, rcy, rw * 0.20, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.lineWidth = Math.max(1.5, thinW * 0.9);
+            ctx.strokeStyle = '#0a0a0c';
+            ctx.stroke();
+          }
+
+          ctx.lineWidth = thickW * 0.88;
+          ctx.strokeStyle = '#0a0a0c';
+          ctx.strokeRect(rx, ry, rw, rh);
+
+          ctx.restore();
+        }
+      }
+
+      function drawCenter3DDie(ctx) {
+        const u = cellPx;
+        const cx = 7.5 * u;
+        const cy = 7.5 * u;
+        const d = anim.dice;
+
+        const isHumanRollReady =
+          state.phase === 'ROLL' &&
+          state.players[state.turnIndex].mode === 'HUM';
+
+        const idleBreath = isHumanRollReady ? Math.sin(anim.tick * 0.1) * 0.08 : 0;
+        const lift = d.zLift + Math.max(0, idleBreath);
+
+        const baseHalf = u * 0.48 * (1 + lift * 0.28);
+
+        const tiltX = -0.24 + (isHumanRollReady ? Math.sin(anim.tick * 0.06) * 0.05 : 0);
+        const tiltY = 0.22 + (isHumanRollReady ? Math.cos(anim.tick * 0.06) * 0.05 : 0);
+
+        function transformPoint(vx, vy, vz) {
+          let x1 = vx * Math.cos(d.ry) + vz * Math.sin(d.ry);
+          let y1 = vy;
+          let z1 = -vx * Math.sin(d.ry) + vz * Math.cos(d.ry);
+
+          let x2 = x1;
+          let y2 = y1 * Math.cos(d.rx) - z1 * Math.sin(d.rx);
+          let z2 = y1 * Math.sin(d.rx) + z1 * Math.cos(d.rx);
+
+          let x3 = x2 * Math.cos(d.rz) - y2 * Math.sin(d.rz);
+          let y3 = x2 * Math.sin(d.rz) + y2 * Math.cos(d.rz);
+          let z3 = z2;
+
+          let x4 = x3 * Math.cos(tiltY) + z3 * Math.sin(tiltY);
+          let y4 = y3;
+          let z4 = -x3 * Math.sin(tiltY) + z3 * Math.cos(tiltY);
+
+          let x5 = x4;
+          let y5 = y4 * Math.cos(tiltX) - z4 * Math.sin(tiltX);
+          let z5 = y4 * Math.sin(tiltX) + z4 * Math.cos(tiltX);
+
+          const fov = 4.2;
+          const persp = fov / (fov - z5 * 0.55);
+          return {
+            x: x5 * baseHalf * d.scaleX * persp,
+            y: y5 * baseHalf * d.scaleY * persp - lift * u * 0.24,
+            z: z5
+          };
+        }
+
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        if (isHumanRollReady) {
+          const pulse = 1 + Math.sin(anim.tick * 0.13) * 0.09;
+          const rSize = u * 0.64 * pulse;
+          ctx.save();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = Math.max(2.5, u * 0.07);
+          ctx.strokeRect(-rSize, -rSize, rSize * 2, rSize * 2);
+          ctx.restore();
+        }
+
+        const shOffset = u * (0.10 + lift * 0.16);
+        const shSize = baseHalf * (1.06 - lift * 0.08);
+        ctx.fillStyle = 'rgba(10, 10, 12, 0.85)';
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(-shSize + shOffset, -shSize + shOffset, shSize * 2, shSize * 2, u * 0.08);
+        } else {
+          ctx.rect(-shSize + shOffset, -shSize + shOffset, shSize * 2, shSize * 2);
+        }
+        ctx.fill();
+
+        const cubeFaces = [
+          { val: 1, n: [0, 0, 1], u: [1, 0, 0], v: [0, 1, 0] },
+          { val: 6, n: [0, 0, -1], u: [-1, 0, 0], v: [0, 1, 0] },
+          { val: 2, n: [0, 1, 0], u: [1, 0, 0], v: [0, 0, -1] },
+          { val: 5, n: [0, -1, 0], u: [1, 0, 0], v: [0, 0, 1] },
+          { val: 3, n: [1, 0, 0], u: [0, 0, -1], v: [0, 1, 0] },
+          { val: 4, n: [-1, 0, 0], u: [0, 0, 1], v: [0, 1, 0] }
+        ];
+
+        const pipCoords2D = {
+          1: [[0, 0]],
+          2: [[-0.48, -0.48], [0.48, 0.48]],
+          3: [[-0.5, -0.5], [0, 0], [0.5, 0.5]],
+          4: [[-0.46, -0.46], [0.46, -0.46], [-0.46, 0.46], [0.46, 0.46]],
+          5: [[-0.48, -0.48], [0.48, -0.48], [0, 0], [-0.48, 0.48], [0.48, 0.48]],
+          6: [[-0.46, -0.52], [0.46, -0.52], [-0.46, 0], [0.46, 0], [-0.46, 0.52], [0.46, 0.52]]
+        };
+
+        const projectedFaces = cubeFaces.map(f => {
+          const [nx, ny, nz] = f.n;
+          const [ux, uy, uz] = f.u;
+          const [vx, vy, vz] = f.v;
+
+          const corners3D = [
+            [nx - ux - vx, ny - uy - vy, nz - uz - vz],
+            [nx + ux - vx, ny + uy - vy, nz + uz - vz],
+            [nx + ux + vx, ny + uy + vy, nz + uz + vz],
+            [nx - ux + vx, ny - uy + vy, nz - uz + vz]
+          ];
+
+          const pts = corners3D.map(c => transformPoint(c[0], c[1], c[2]));
+          const centerPt = transformPoint(nx, ny, nz);
+          const originPt = transformPoint(0, 0, 0);
+          const normalZ = centerPt.z - originPt.z;
+
+          const cross =
+            (pts[1].x - pts[0].x) * (pts[2].y - pts[0].y) -
+            (pts[1].y - pts[0].y) * (pts[2].x - pts[0].x);
+
+          return {
+            val: f.val,
+            f,
+            pts,
+            avgZ: (pts[0].z + pts[1].z + pts[2].z + pts[3].z) * 0.25,
+            normalZ,
+            visible: cross > 0
+          };
+        }).filter(pf => pf.visible);
+
+        projectedFaces.sort((a, b) => a.avgZ - b.avgZ);
+
+        const edgeW = Math.max(2.5, u * 0.085);
+
+        projectedFaces.forEach(pf => {
+          const { pts, f, val, normalZ } = pf;
+
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          ctx.lineTo(pts[1].x, pts[1].y);
+          ctx.lineTo(pts[2].x, pts[2].y);
+          ctx.lineTo(pts[3].x, pts[3].y);
+          ctx.closePath();
+
+          if (normalZ > 0.72) {
+            ctx.fillStyle = '#ffffff';
+          } else if (normalZ > 0.25) {
+            ctx.fillStyle = '#e5e0d2';
+          } else {
+            ctx.fillStyle = '#c9c3b2';
+          }
+          ctx.fill();
+
+          ctx.lineWidth = edgeW;
+          ctx.lineJoin = 'round';
+          ctx.strokeStyle = '#0a0a0c';
+          ctx.stroke();
+
+          const pips = pipCoords2D[val] || pipCoords2D[5];
+          const [nx, ny, nz] = f.n;
+          const [ux, uy, uz] = f.u;
+          const [vx, vy, vz] = f.v;
+
+          pips.forEach(([pu, pv]) => {
+            const pCenter = transformPoint(
+              nx + ux * pu + vx * pv,
+              ny + uy * pu + vy * pv,
+              nz + uz * pu + vz * pv
+            );
+            const pipR = baseHalf * (val === 1 ? 0.22 : 0.155) * Math.max(0.45, normalZ);
+            ctx.beginPath();
+            ctx.arc(pCenter.x, pCenter.y, pipR, 0, Math.PI * 2);
+            ctx.fillStyle = val === 6 ? FACTIONS[state.turnIndex].color : '#0a0a0c';
+            ctx.fill();
+            if (val === 6) {
+              ctx.lineWidth = Math.max(1, u * 0.03);
+              ctx.strokeStyle = '#0a0a0c';
+              ctx.stroke();
+            }
+          });
+        });
+
+        ctx.restore();
+      }
+
+      function drawCenterRolledNumbers(ctx) {
+        const u = cellPx;
+        for (let p = 0; p < 4; p++) {
+          const cn = anim.centerNumbers[p];
+          if (cn.val === null || cn.alpha <= 0.01) continue;
+
+          const [gx, gy] = CENTER_NUMBER_SLOTS[p];
+          const px = gx * u;
+          const py = gy * u;
+
+          ctx.save();
+          ctx.translate(px, py);
+          ctx.scale(cn.scale, cn.scale);
+          ctx.globalAlpha = cn.alpha;
+
+          const fontSize = Math.round(u * 0.64);
+          ctx.font = `900 ${fontSize}px "Barlow Condensed", sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+
+          const sh = Math.max(1.5, u * 0.055);
+          ctx.fillStyle = '#0a0a0c';
+          ctx.fillText(String(cn.val), sh, sh);
+
+          ctx.lineWidth = Math.max(3, u * 0.11);
+          ctx.lineJoin = 'round';
+          ctx.strokeStyle = '#0a0a0c';
+          ctx.strokeText(String(cn.val), 0, 0);
+
+          ctx.fillStyle = '#ffffff';
+          ctx.fillText(String(cn.val), 0, 0);
+
+          ctx.restore();
+        }
+      }
+
+      function drawStrikeAimOverlay(ctx) {
+        if (!anim.strike.dragging || state.phase !== 'STRIKE_AIM') return;
+        const u = cellPx;
+        const sx = anim.strike.startX * u;
+        const sy = anim.strike.startY * u;
+
+        const shotDx = anim.strike.startX - anim.strike.pullX;
+        const shotDy = anim.strike.startY - anim.strike.pullY;
+        const rawDist = Math.hypot(shotDx, shotDy);
+        if (rawDist < 0.12) return;
+
+        const pullMag = Math.min(3.2, rawDist);
+        const dirX = shotDx / rawDist;
+        const dirY = shotDy / rawDist;
+        const clampedPullX = (anim.strike.startX - dirX * pullMag) * u;
+        const clampedPullY = (anim.strike.startY - dirY * pullMag) * u;
+
+        ctx.save();
+
+        // 1. Slingshot Tether Line + Brutalist Square Pull Handle
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(clampedPullX, clampedPullY);
+        ctx.lineWidth = Math.max(3, u * 0.1);
+        ctx.strokeStyle = '#0a0a0c';
+        ctx.stroke();
+
+        const handleSz = u * 0.36;
+        ctx.fillStyle = FACTIONS[state.turnIndex].color;
+        ctx.fillRect(clampedPullX - handleSz * 0.5, clampedPullY - handleSz * 0.5, handleSz, handleSz);
+        ctx.lineWidth = Math.max(2, u * 0.065);
+        ctx.strokeStyle = '#0a0a0c';
+        ctx.strokeRect(clampedPullX - handleSz * 0.5, clampedPullY - handleSz * 0.5, handleSz, handleSz);
+
+        // 2. Forward Trajectory Line & Brutalist Square Nodes (+50% reach preview)
+        const beamLen = pullMag * 2.85 * u;
+        const endX = sx + dirX * beamLen;
+        const endY = sy + dirY * beamLen;
+
+        ctx.beginPath();
+        ctx.setLineDash([u * 0.18, u * 0.12]);
+        ctx.lineDashOffset = -(anim.tick * 1.2);
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(endX, endY);
+        ctx.lineWidth = Math.max(3, u * 0.095);
+        ctx.strokeStyle = '#0a0a0c';
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        const snakeCols = ['#ff2e1f', '#00b862', '#ffb800', '#1f5eff'];
+        const steps = 6;
+        const nodeSz = u * 0.2;
+        for (let i = 1; i <= steps; i++) {
+          const f = i / (steps + 1);
+          const bx = sx + dirX * beamLen * f;
+          const by = sy + dirY * beamLen * f;
+          ctx.fillStyle = snakeCols[(i + Math.floor(anim.tick / 5)) % 4];
+          ctx.fillRect(bx - nodeSz * 0.5, by - nodeSz * 0.5, nodeSz, nodeSz);
+          ctx.lineWidth = Math.max(1.5, u * 0.04);
+          ctx.strokeStyle = '#0a0a0c';
+          ctx.strokeRect(bx - nodeSz * 0.5, by - nodeSz * 0.5, nodeSz, nodeSz);
+        }
+
+        // 3. Brutalist Arrowhead at (endX, endY)
+        const ang = Math.atan2(dirY, dirX);
+        const ahSz = u * 0.32;
+        ctx.save();
+        ctx.translate(endX, endY);
+        ctx.rotate(ang);
+        ctx.beginPath();
+        ctx.moveTo(ahSz, 0);
+        ctx.lineTo(-ahSz * 0.6, -ahSz * 0.7);
+        ctx.lineTo(-ahSz * 0.6, ahSz * 0.7);
+        ctx.closePath();
+        ctx.fillStyle = FACTIONS[state.turnIndex].color;
+        ctx.fill();
+        ctx.lineWidth = Math.max(2, u * 0.065);
+        ctx.strokeStyle = '#0a0a0c';
+        ctx.stroke();
+        ctx.restore();
+
+        ctx.restore();
+      }
+
+      function drawBoard() {
+        if (!boardPx) resizeCanvases();
+        const ctx = bCtx;
+        const S = boardPx;
+        const u = cellPx;
+        const thinW = Math.max(1.5, u * 0.055);
+        const thickW = Math.max(3, u * 0.11);
+
+        ctx.save();
+        ctx.clearRect(0, 0, S, S);
+
+        if (anim.screenShake > 0.2) {
+          const sx = (Math.random() - 0.5) * anim.screenShake;
+          const sy = (Math.random() - 0.5) * anim.screenShake;
+          ctx.translate(sx, sy);
+          anim.screenShake *= 0.82;
+        } else {
+          anim.screenShake = 0;
+        }
+
+        // 1. Base Archival Surface
+        ctx.fillStyle = '#f4f1e8';
+        ctx.fillRect(0, 0, S, S);
+
+        // 2. Colored Home Stretches
+        HOME_PATHS.forEach((path, pIdx) => {
+          ctx.fillStyle = FACTIONS[pIdx].color;
+          path.forEach(([x, y]) => {
+            ctx.fillRect(x * u, y * u, u, u);
+          });
+        });
+
+        // 3. Safe Squares (4 Colored Starts + 4 Concrete Star Squares)
+        SAFE_TRACK_INDICES.forEach(gIdx => {
+          const [x, y] = MAIN_TRACK[gIdx];
+          const owner = START_SQUARE_OWNER[gIdx];
+          ctx.fillStyle = owner !== undefined ? FACTIONS[owner].color : '#dad6c8';
+          ctx.fillRect(x * u, y * u, u, u);
+        });
+
+        // 4. Track Cell Grid Lines
+        ctx.strokeStyle = '#0a0a0c';
+        ctx.lineWidth = thinW;
+        for (let x = 0; x < 15; x++) {
+          for (let y = 0; y < 15; y++) {
+            const inCornerYard = (x < 6 || x > 8) && (y < 6 || y > 8);
+            const inCenterGoal = x >= 6 && x <= 8 && y >= 6 && y <= 8;
+            if (!inCornerYard && !inCenterGoal) {
+              ctx.strokeRect(x * u, y * u, u, u);
+            }
+          }
+        }
+
+        // 4b. Highlight ONLY the Active Player's 6-Cell Home Column Boundary (5 colour + 1 white) during Strike
+        if (state.phase === 'STRIKE_AIM' || state.phase === 'STRIKE_SIM') {
+          const [bx0, by0, bx1, by1] = HOME_COLUMN_BARRIERS[state.turnIndex];
+          ctx.save();
+          ctx.strokeStyle = '#0a0a0c';
+          ctx.lineWidth = thickW * 1.45;
+          ctx.strokeRect(bx0 * u, by0 * u, (bx1 - bx0) * u, (by1 - by0) * u);
+          ctx.restore();
+        }
+
+        // 5. Start Chevrons & Safe Stars
+        const startAngles = [-Math.PI / 2, 0, Math.PI / 2, Math.PI];
+        SAFE_TRACK_INDICES.forEach(gIdx => {
+          const [x, y] = MAIN_TRACK[gIdx];
+          const owner = START_SQUARE_OWNER[gIdx];
+          if (owner !== undefined) {
+            drawChevron(ctx, x, y, startAngles[owner]);
+          } else {
+            drawStar(ctx, (x + 0.5) * u, (y + 0.5) * u, u * 0.34, u * 0.15);
+          }
+        });
+
+        // 6. Four 6x6 Corner Yards + 4 Square Score Cells + Center Human/Bot Logos
+        YARD_BOUNDS.forEach(([x0, y0, x1, y1], pIdx) => {
+          const f = FACTIONS[pIdx];
+          const mode = state.players[pIdx].mode;
+          const isTurn = state.turnIndex === pIdx && state.phase !== 'GAMEOVER';
+          const wx = x0 * u;
+          const wy = y0 * u;
+          const ww = (x1 - x0) * u;
+
+          ctx.fillStyle = mode === 'OFF' ? '#beb9a8' : f.color;
+          ctx.fillRect(wx, wy, ww, ww);
+
+          const pad = YARD_PAD * u;
+          ctx.fillStyle = mode === 'OFF' ? '#dad6c8' : isTurn ? '#ffffff' : '#f4f1e8';
+          ctx.fillRect(wx + pad, wy + pad, ww - pad * 2, ww - pad * 2);
+
+          if (isTurn) {
+            ctx.save();
+            ctx.strokeStyle = f.color;
+            ctx.lineWidth = Math.max(2, u * 0.08);
+            const inset = pad + u * 0.11;
+            ctx.strokeRect(wx + inset, wy + inset, ww - inset * 2, ww - inset * 2);
+            ctx.restore();
+          }
+
+          ctx.lineWidth = thickW;
+          ctx.strokeStyle = '#0a0a0c';
+          ctx.strokeRect(wx + pad, wy + pad, ww - pad * 2, ww - pad * 2);
+          ctx.strokeRect(wx, wy, ww, ww);
+
+          YARD_SLOTS[pIdx].forEach(([sx, sy]) => {
+            ctx.beginPath();
+            ctx.arc(sx * u, sy * u, u * 0.54, 0, Math.PI * 2);
+            ctx.fillStyle = mode === 'OFF' ? '#beb9a8' : f.tint;
+            ctx.fill();
+            ctx.lineWidth = thinW * 1.35;
+            ctx.strokeStyle = '#0a0a0c';
+            ctx.stroke();
+          });
+
+          drawYardCenterLogo(ctx, pIdx);
+          drawYardScoreCells(ctx, pIdx, thinW, thickW);
+        });
+
+        // 7. Center 3x3 Home Zone (4 Colored Areas + Rolled Number + 3D Die)
+        const gx = 6 * u;
+        const gy = 6 * u;
+        const gw = 3 * u;
+        const cx = 7.5 * u;
+        const cy = 7.5 * u;
+
+        const tris = [
+          { p: 0, pts: [[gx, gy + gw], [gx + gw, gy + gw], [cx, cy]] },
+          { p: 1, pts: [[gx, gy], [gx, gy + gw], [cx, cy]] },
+          { p: 2, pts: [[gx, gy], [gx + gw, gy], [cx, cy]] },
+          { p: 3, pts: [[gx + gw, gy], [gx + gw, gy + gw], [cx, cy]] }
+        ];
+
+        tris.forEach(({ p, pts }) => {
+          ctx.beginPath();
+          ctx.moveTo(pts[0][0], pts[0][1]);
+          ctx.lineTo(pts[1][0], pts[1][1]);
+          ctx.lineTo(pts[2][0], pts[2][1]);
+          ctx.closePath();
+          ctx.fillStyle = FACTIONS[p].color;
+          ctx.fill();
+          ctx.lineWidth = thickW * 0.85;
+          ctx.strokeStyle = '#0a0a0c';
+          ctx.stroke();
+        });
+
+        ctx.lineWidth = thickW;
+        ctx.strokeStyle = '#0a0a0c';
+        ctx.strokeRect(gx, gy, gw, gw);
+
+        drawCenterRolledNumbers(ctx);
+        drawCenter3DDie(ctx);
+
+        // 8. Draw Brutalist Square Striker Trails
+        for (let i = anim.trails.length - 1; i >= 0; i--) {
+          const tr = anim.trails[i];
+          tr.alpha -= 0.045;
+          tr.sz *= 0.94;
+          if (tr.alpha <= 0) {
+            anim.trails.splice(i, 1);
+            continue;
+          }
+          const tSz = tr.sz * u;
+          ctx.save();
+          ctx.globalAlpha = tr.alpha;
+          ctx.fillStyle = tr.color;
+          ctx.fillRect(tr.x * u - tSz * 0.5, tr.y * u - tSz * 0.5, tSz, tSz);
+          ctx.lineWidth = Math.max(1, u * 0.03);
+          ctx.strokeStyle = '#0a0a0c';
+          ctx.strokeRect(tr.x * u - tSz * 0.5, tr.y * u - tSz * 0.5, tSz, tSz);
+          ctx.restore();
+        }
+
+        // 9. Compute Unified Token Layout
+        const tokensToDraw = computeRenderedTokens();
+
+        // 10. Draw Move Preview Trajectories & Destination Targets
+        tokensToDraw.forEach(tk => {
+          if (!tk.isSelectable || tk.destX === null) return;
+          const sx = tk.x * u;
+          const sy = tk.y * u;
+          const tx = tk.destX * u;
+          const ty = tk.destY * u;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.setLineDash([u * 0.16, u * 0.12]);
+          ctx.lineDashOffset = -(anim.tick * 0.6);
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(tx, ty);
+          ctx.lineWidth = Math.max(2, u * 0.08);
+          ctx.strokeStyle = '#0a0a0c';
+          ctx.stroke();
+
+          ctx.setLineDash([]);
+          const rad = u * 0.32 * (1 + Math.sin(anim.tick * 0.15) * 0.1);
+          ctx.beginPath();
+          ctx.arc(tx, ty, rad, 0, Math.PI * 2);
+          ctx.fillStyle = FACTIONS[tk.p].color;
+          ctx.fill();
+          ctx.lineWidth = Math.max(2, u * 0.07);
+          ctx.strokeStyle = '#0a0a0c';
+          ctx.stroke();
+
+          if (tk.isCaptureMove) {
+            const cr = rad * 0.55;
+            ctx.beginPath();
+            ctx.moveTo(tx - cr, ty - cr);
+            ctx.lineTo(tx + cr, ty + cr);
+            ctx.moveTo(tx + cr, ty - cr);
+            ctx.lineTo(tx - cr, ty + cr);
+            ctx.lineWidth = Math.max(2, u * 0.07);
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+          }
+          ctx.restore();
+        });
+
+        // 11. Draw Shockwaves
+        anim.shockwaves.forEach(sw => {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(sw.x * u, sw.y * u, u * (0.25 + sw.progress * sw.maxR), 0, Math.PI * 2);
+          ctx.strokeStyle = sw.color;
+          ctx.lineWidth = Math.max(2, u * 0.15 * (1 - sw.progress));
+          ctx.stroke();
+          ctx.restore();
+        });
+
+        // 12. Draw Static, Strike-Ready & Selectable Tokens (with Seals)
+        tokensToDraw.forEach(tk => {
+          drawTokenDisc(
+            ctx,
+            tk.p,
+            tk.x * u,
+            tk.y * u,
+            tk.scale,
+            tk.scale,
+            tk.isSelectable || tk.isStrikeReady,
+            tk.isStrikeReady,
+            tk.seals || 0
+          );
+        });
+
+        // 13. Draw Slingshot Aiming Vector on top of tokens
+        drawStrikeAimOverlay(ctx);
+
+        // 14. Draw Returning Captured Tokens
+        anim.returningTokens.forEach(rt => {
+          const rSeals = state.players[rt.p].seals[rt.t] || 0;
+          drawTokenDisc(ctx, rt.p, rt.x * u, rt.y * u, 0.9, 0.9, false, false, rSeals);
+        });
+
+        // 15. Draw Active Hopping Token on Top
+        if (anim.activeHop) {
+          const ah = anim.activeHop;
+          const ahSeals = state.players[ah.p].seals[ah.t] || 0;
+          drawTokenDisc(ctx, ah.p, ah.x * u, ah.y * u, ah.scaleX, ah.scaleY, false, false, ahSeals);
+        }
+
+        // 16. Draw Scoring Tokens Flying into Yard Score Cells
+        anim.scoringTokens.forEach(st => {
+          drawTokenDisc(ctx, st.p, st.x * u, st.y * u, st.scale, st.scale, false, false, 0);
+        });
+
+        // 17. Update & Draw Juicy Particles
+        for (let i = anim.particles.length - 1; i >= 0; i--) {
+          const pt = anim.particles[i];
+          pt.x += pt.vx;
+          pt.y += pt.vy;
+          pt.vy += 0.0035;
+          pt.rot += pt.vrot;
+          pt.alpha -= pt.decay;
+
+          if (pt.alpha <= 0) {
+            anim.particles.splice(i, 1);
+            continue;
+          }
+
+          ctx.save();
+          ctx.globalAlpha = pt.alpha;
+          ctx.translate(pt.x * u, pt.y * u);
+          ctx.rotate(pt.rot);
+          const sz = pt.size * u;
+          ctx.fillStyle = pt.color;
+          ctx.fillRect(-sz / 2, -sz / 2, sz, sz);
+          ctx.lineWidth = Math.max(1, u * 0.03);
+          ctx.strokeStyle = '#0a0a0c';
+          ctx.strokeRect(-sz / 2, -sz / 2, sz, sz);
+          ctx.restore();
+        }
+
+        ctx.restore();
+      }
+
+      // Draw Token Disc + T-Nail Seal Clamps (1, 2, or 3 seals) matching Image 1
+      function drawTokenDisc(ctx, pIdx, px, py, scaleX, scaleY, isHighlighted, isStrikeReady, sealsCount = 0) {
+        const u = cellPx;
+        const f = FACTIONS[pIdx];
+        const r = u * 0.36;
+        const strokeW = Math.max(2, u * 0.065);
+
+        ctx.save();
+        ctx.translate(px, py);
+
+        if (isHighlighted) {
+          const pulse = 1 + Math.sin(anim.tick * 0.16) * 0.15;
+          if (isStrikeReady) {
+            const sq = r * 1.38 * pulse;
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(-sq, -sq, sq * 2, sq * 2);
+            ctx.lineWidth = Math.max(2.5, u * 0.075);
+            ctx.strokeStyle = '#0a0a0c';
+            ctx.strokeRect(-sq, -sq, sq * 2, sq * 2);
+          } else {
+            ctx.beginPath();
+            ctx.arc(0, 0, r * 1.45 * pulse, 0, Math.PI * 2);
+            ctx.fillStyle = '#ffffff';
+            ctx.fill();
+            ctx.lineWidth = Math.max(2.5, u * 0.08);
+            ctx.strokeStyle = '#0a0a0c';
+            ctx.stroke();
+          }
+        }
+
+        ctx.scale(scaleX, scaleY);
+
+        // Hard brutalist offset shadow
+        const sh = u * 0.08;
+        ctx.beginPath();
+        ctx.arc(sh, sh, r, 0, Math.PI * 2);
+        ctx.fillStyle = '#0a0a0c';
+        ctx.fill();
+
+        // Main colored token disc
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fillStyle = f.color;
+        ctx.fill();
+        ctx.lineWidth = strokeW;
+        ctx.strokeStyle = '#0a0a0c';
+        ctx.stroke();
+
+        // If UNSEALED (sealsCount === 0): draw the open white inner circle (top piece in Image 1).
+        // If SEALED (sealsCount > 0): center remains solid faction color (bottom piece in Image 1)
+        // and draw 1, 2, or 3 black T-shaped nail seals driven into the ring!
+        if (sealsCount === 0) {
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 0.48, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+          ctx.lineWidth = strokeW * 0.85;
+          ctx.strokeStyle = '#0a0a0c';
+          ctx.stroke();
+        } else {
+          const pinCount = Math.min(3, sealsCount);
+          const shaftW = Math.max(2.5, u * 0.105);
+          const innerStart = r * 0.88;
+          const outerEnd = u * 0.64;
+          const headHalfW = u * 0.14;
+
+          ctx.strokeStyle = '#0a0a0c';
+          ctx.fillStyle = '#0a0a0c';
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+
+          for (let i = 0; i < pinCount; i++) {
+            const ang = SEAL_ANGLES[i];
+            ctx.save();
+            ctx.rotate(ang);
+
+            // Radial black nail shaft clamping from the colored disc edge across the outer ring
+            ctx.lineWidth = shaftW;
+            ctx.beginPath();
+            ctx.moveTo(innerStart, 0);
+            ctx.lineTo(outerEnd, 0);
+            ctx.stroke();
+
+            // Perpendicular black T-nail cap at outerEnd
+            ctx.lineWidth = shaftW * 1.15;
+            ctx.beginPath();
+            ctx.moveTo(outerEnd, -headHalfW);
+            ctx.lineTo(outerEnd, headHalfW);
+            ctx.stroke();
+
+            ctx.restore();
+          }
+        }
+
+        ctx.restore();
+      }
+
+      function renderLoop() {
+        anim.tick++;
+        drawBoard();
+        requestAnimationFrame(renderLoop);
+      }
+
+      /* =========================================================================
+         10. SPATIAL BOARD INPUT HANDLERS (STRIKE DRAG-AIM-SHOOT, DIE & LOGOS)
+         ========================================================================= */
+      function getGridXYFromEvent(e) {
+        const rect = boardCanvas.getBoundingClientRect();
+        return {
+          x: ((e.clientX - rect.left) / rect.width) * 15,
+          y: ((e.clientY - rect.top) / rect.height) * 15
+        };
+      }
+
+      function cycleFactionMode(p) {
+        const curMode = state.players[p].mode;
+        const activeCount = state.players.filter(pl => pl.mode !== 'OFF').length;
+        let nextMode = 'HUM';
+        if (curMode === 'HUM') nextMode = 'CPU';
+        else if (curMode === 'CPU') nextMode = activeCount > 2 ? 'OFF' : 'HUM';
+        else nextMode = 'HUM';
+
+        state.players[p].mode = nextMode;
+        sfx.toggleMode();
+        popYardFace(p);
+
+        if (p === state.turnIndex && nextMode === 'OFF') {
+          passTurnToNextPlayer();
+        } else {
+          syncTurnFlow();
+        }
+      }
+
+      boardCanvas.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        sfx.init();
+
+        const { x: clickX, y: clickY } = getGridXYFromEvent(e);
+
+        // 1. Check if user tapped any Yard's Center Human / Bot Logo (at [3,3], [12,3], [3,12], [12,12])
+        for (let p = 0; p < 4; p++) {
+          const [cx, cy] = YARD_CENTERS[p];
+          if (Math.hypot(clickX - cx, clickY - cy) < 0.76) {
+            cycleFactionMode(p);
+            return;
+          }
+        }
+
+        const pIdx = state.turnIndex;
+        const curP = state.players[pIdx];
+        if (curP.mode !== 'HUM') return;
+
+        // 2. Mandatory STRIKE_AIM Phase: Grab any of the current player's eligible pieces to drag & shoot
+        if (state.phase === 'STRIKE_AIM') {
+          const rendered = computeRenderedTokens().filter(tk => tk.p === pIdx && tk.isStrikeReady);
+          let bestToken = -1;
+          let bestDist = 1.65;
+          let startX = clickX;
+          let startY = clickY;
+
+          for (const tk of rendered) {
+            const d = Math.hypot(clickX - tk.x, clickY - tk.y);
+            if (d < bestDist) {
+              bestDist = d;
+              bestToken = tk.t;
+              startX = tk.x;
+              startY = tk.y;
+            }
+          }
+
+          if (bestToken !== -1) {
+            anim.strike.dragging = true;
+            anim.strike.pointerId = e.pointerId;
+            anim.strike.tokenIdx = bestToken;
+            anim.strike.startX = startX;
+            anim.strike.startY = startY;
+            anim.strike.pullX = clickX;
+            anim.strike.pullY = clickY;
+            try {
+              boardCanvas.setPointerCapture(e.pointerId);
+            } catch (_) {}
+          }
+          return;
+        }
+
+        // 3. ROLL Phase: Tapping the Center 3D Die (or anywhere on the board) rolls the die
+        if (state.phase === 'ROLL') {
+          startDiceRoll();
+          return;
+        }
+
+        if (state.phase !== 'MOVE') return;
+
+        const rendered = computeRenderedTokens().filter(tk => tk.isSelectable);
+
+        // 4. Direct hit-test against rendered selectable tokens
+        let bestToken = -1;
+        let bestDist = 1.45;
+        for (const tk of rendered) {
+          const d = Math.hypot(clickX - tk.x, clickY - tk.y);
+          if (d < bestDist) {
+            bestDist = d;
+            bestToken = tk.t;
+          }
+        }
+        if (bestToken !== -1) {
+          performTokenMove(pIdx, bestToken);
+          return;
+        }
+
+        // 5. Hit-test against highlighted destination markers
+        let bestDestDist = 1.15;
+        for (const tk of rendered) {
+          if (tk.destX !== null) {
+            const d = Math.hypot(clickX - tk.destX, clickY - tk.destY);
+            if (d < bestDestDist) {
+              bestDestDist = d;
+              bestToken = tk.t;
+            }
+          }
+        }
+        if (bestToken !== -1) {
+          performTokenMove(pIdx, bestToken);
+          return;
+        }
+
+        // 6. Whole-Yard tap detection if player has a deployable token in Yard
+        const [x0, y0, x1, y1] = YARD_BOUNDS[pIdx];
+        if (clickX >= x0 && clickX <= x1 && clickY >= y0 && clickY <= y1) {
+          // Prefer deploying an unsealed token if available; otherwise break a seal
+          const unsealedYardToken = state.validTokens.find(t => curP.tokens[t] === -1 && (curP.seals[t] || 0) === 0);
+          const anyYardToken = state.validTokens.find(t => curP.tokens[t] === -1);
+          const chosen = unsealedYardToken !== undefined ? unsealedYardToken : anyYardToken;
+          if (chosen !== undefined) {
+            performTokenMove(pIdx, chosen);
+          }
+        }
+      });
+
+      boardCanvas.addEventListener('pointermove', e => {
+        if (!anim.strike.dragging || state.phase !== 'STRIKE_AIM') return;
+        const { x, y } = getGridXYFromEvent(e);
+        anim.strike.pullX = x;
+        anim.strike.pullY = y;
+        anim.lookTarget = {
+          x: anim.strike.startX + (anim.strike.startX - x),
+          y: anim.strike.startY + (anim.strike.startY - y)
+        };
+      });
+
+      function finishStrikeDrag(e) {
+        if (!anim.strike.dragging) return;
+        anim.strike.dragging = false;
+        try {
+          if (anim.strike.pointerId !== null) {
+            boardCanvas.releasePointerCapture(anim.strike.pointerId);
+          }
+        } catch (_) {}
+
+        if (state.phase !== 'STRIKE_AIM') return;
+        const shotDx = anim.strike.startX - anim.strike.pullX;
+        const shotDy = anim.strike.startY - anim.strike.pullY;
+        const pullDist = Math.hypot(shotDx, shotDy);
+
+        if (pullDist >= 0.32) {
+          launchStrikeShot(state.turnIndex, anim.strike.tokenIdx, shotDx, shotDy);
+        }
+      }
+
+      boardCanvas.addEventListener('pointerup', finishStrikeDrag);
+      boardCanvas.addEventListener('pointercancel', finishStrikeDrag);
+
+      /* =========================================================================
+         11. UTILITY CONTROLS, RESTART & SETTINGS MODAL
+         ========================================================================= */
+      function openSettingsModal(winnerIdx = null) {
+        if (winnerIdx !== null) {
+          const names = ['RED', 'GREEN', 'YELLOW', 'BLUE'];
+          modalTitle.textContent = `${names[winnerIdx]} WINS!`;
+        } else {
+          modalTitle.textContent = 'SETTINGS';
+        }
+        syncSettingsUI();
+        settingsModal.classList.add('open');
+      }
+
+      function closeSettingsModal() {
+        settingsModal.classList.remove('open');
+      }
+
+      function startNewMatch() {
+        state.epoch++;
+        cancelAllAsync();
+
+        state.round = 1;
+        state.hasStruckThisTurn = false;
+        state.diceValue = null;
+        state.sixCount = 0;
+        state.validTokens = [];
+        state.rankings = [];
+        anim.returningTokens = [];
+        anim.scoringTokens = [];
+        anim.shockwaves = [];
+        anim.particles = [];
+        anim.trails = [];
+
+        for (let i = 0; i < 4; i++) {
+          state.players[i].tokens = [-1, -1, -1, -1];
+          state.players[i].seals = [0, 0, 0, 0];
+          state.players[i].drought = 0;
+          anim.centerNumbers[i] = { val: null, scale: 0, alpha: 0 };
+        }
+
+        const first = state.players.findIndex(p => p.mode !== 'OFF');
+        state.turnIndex = first !== -1 ? first : 0;
+        state.phase = isStrikeRound() ? 'STRIKE_AIM' : 'ROLL';
+
+        closeSettingsModal();
+        sfx.deploy();
+        syncTurnFlow();
+      }
+
+      quickModeBtn.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        sfx.init();
+        sfx.toggleMode();
+        state.gameMode = state.gameMode === 'STRIKE_DICE' ? 'CLASSIC' : 'STRIKE_DICE';
+        if (state.gameMode === 'CLASSIC' && state.phase === 'STRIKE_AIM') {
+          state.phase = 'ROLL';
+        } else if (state.gameMode === 'STRIKE_DICE' && isStrikeRound() && !state.hasStruckThisTurn && state.phase === 'ROLL') {
+          state.phase = 'STRIKE_AIM';
+        }
+        syncTurnFlow();
+      });
+
+      quickSpeedBtn.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        sfx.init();
+        state.fastMode = !state.fastMode;
+        sfx.toggleMode();
+        syncSettingsUI();
+        saveState();
+      });
+
+      quickSfxBtn.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        sfx.enabled = !sfx.enabled;
+        if (sfx.enabled) sfx.toggleMode();
+        syncSettingsUI();
+        saveState();
+      });
+
+      quickRestartBtn.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        sfx.init();
+        startNewMatch();
+      });
+
+      openSettingsBtn.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        sfx.init();
+        sfx.toggleMode();
+        openSettingsModal(null);
+      });
+
+      closeModalBtn.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        closeSettingsModal();
+      });
+
+      resumeBtn.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        closeSettingsModal();
+      });
+
+      restartMatchBtn.addEventListener('pointerdown', e => {
+        e.preventDefault();
+        sfx.init();
+        startNewMatch();
+      });
+
+      document.querySelectorAll('#modeSegGroup .seg-btn').forEach(btn => {
+        btn.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          sfx.init();
+          sfx.toggleMode();
+          state.gameMode = btn.getAttribute('data-mode');
+          if (state.gameMode === 'CLASSIC' && state.phase === 'STRIKE_AIM') {
+            state.phase = 'ROLL';
+          } else if (state.gameMode === 'STRIKE_DICE' && isStrikeRound() && !state.hasStruckThisTurn && state.phase === 'ROLL') {
+            state.phase = 'STRIKE_AIM';
+          }
+          syncTurnFlow();
+        });
+      });
+
+      document.querySelectorAll('#freqSegGroup .seg-btn').forEach(btn => {
+        btn.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          sfx.init();
+          sfx.toggleMode();
+          state.strikeFreq = Number(btn.getAttribute('data-freq'));
+          if (isStrikeRound() && !state.hasStruckThisTurn && state.phase === 'ROLL') {
+            state.phase = 'STRIKE_AIM';
+          } else if (!isStrikeRound() && state.phase === 'STRIKE_AIM') {
+            state.phase = 'ROLL';
+          }
+          syncTurnFlow();
+        });
+      });
+
+      document.querySelectorAll('#speedSegGroup .seg-btn').forEach(btn => {
+        btn.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          sfx.init();
+          state.fastMode = btn.getAttribute('data-spd') === '2';
+          sfx.toggleMode();
+          syncSettingsUI();
+          saveState();
+        });
+      });
+
+      document.querySelectorAll('#sfxSegGroup .seg-btn').forEach(btn => {
+        btn.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          sfx.enabled = btn.getAttribute('data-sfx') === 'ON';
+          if (sfx.enabled) sfx.toggleMode();
+          syncSettingsUI();
+          saveState();
+        });
+      });
+
+      document.querySelectorAll('[data-f-card]').forEach(card => {
+        card.addEventListener('pointerdown', e => {
+          e.preventDefault();
+          sfx.init();
+          const p = Number(card.getAttribute('data-f-card'));
+          cycleFactionMode(p);
+        });
+      });
+
+      /* =========================================================================
+         12. VIEWPORT LIFECYCLE
+         ========================================================================= */
+      function healCanvas() {
+        resizeCanvases();
+        drawBoard();
+      }
+
+      window.addEventListener('resize', healCanvas);
+      window.addEventListener('pageshow', healCanvas);
+      window.addEventListener('focus', healCanvas);
+
+      const restored = loadState();
+      resizeCanvases();
+      syncSettingsUI();
+      requestAnimationFrame(renderLoop);
+      if (!restored) {
+        saveState();
+      } else {
+        syncTurnFlow();
+      }
+    })();
+  </script>
+</body>
+</html>
